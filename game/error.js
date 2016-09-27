@@ -1,13 +1,15 @@
 /**
- * Created by thomas on 2016-09-27 at 11:40.
+ * Created by thomas on 2016-09-27 at 12:27.
  *
  * MIT Licensed
  */
 var util = require("util");
 
-function APIError(spec, description, error) {
-    if (!(this instanceof APIError))
-        return new APIError(spec, description, error);
+module.exports = GameError;
+
+function GameError(err_spec, description, error) {
+    if (!(this instanceof GameError))
+        return new GameError(err_spec, description, error);
 
     Error.call(this);
 
@@ -26,13 +28,13 @@ function APIError(spec, description, error) {
         "Pragma": "no-cache"
     };
 
-    switch (spec) {
+    switch (err_spec) {
         case "invalid_client":
-        case "invalid_request":
+        case "bad_request":
             this.status = 400;
             break;
-        case "not_found":
-            this.status = 404;
+        case "invalid_token":
+            this.status = 401;
             break;
         case "server_error":
             this.status = 503;
@@ -42,20 +44,20 @@ function APIError(spec, description, error) {
     }
 
     this.error = error;
-    this.error_type = spec;
+    this.error_type = err_spec;
     this.error_description = description || error;
 }
-util.inherits(APIError, Error);
 
-module.exports = APIError;
+util.inherits(GameError, Error);
 
-module.exports.handler = function () {
+GameError.handler = function (game) {
     return function (err, req, res, next) {
-        if (!(err instanceof APIError)) return next(err);
+        if (!(err instanceof GameError)) return next(err);
 
         delete err.name;
         delete err.message;
 
+        game.debug(err.stack || err);
         delete err.stack;
 
         if (err.headers) res.set(err.headers);

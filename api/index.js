@@ -4,15 +4,13 @@
  * MIT Licensed
  */
 var error = require("./error"),
-    create = require("./create"),
-    join = require("./join"),
     express = require("express");
 
-module.exports = function (db) {
+module.exports = function (game) {
     var router = express.Router();
 
-    router.use("/create", create(db));
-    router.use("/join", join(db));
+    router.post("/create", game.create());
+    router.post("/join", game.join());
 
     router.use(function (req, res, next) {
         return next(error("not_found",
