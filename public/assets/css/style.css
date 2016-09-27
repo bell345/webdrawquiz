@@ -1,0 +1,404 @@
+input[type] {
+    border:0;
+    padding:.5em 1em;
+    font-size:24px;
+    margin:auto;
+    transition:0.2s all;
+}
+
+input[type="button"],
+input[type="submit"],
+button {
+    background:none;
+    outline:0;
+    border-radius:.3em;
+    margin:0 .3em;
+    text-transform:uppercase;
+    font-size:14px;
+    cursor:pointer;
+    transition:0.2s all;
+}
+
+input[type="submit"]:not([disabled]),
+button.major:not([disabled]) {
+    background:#08d;
+    color:#eee;
+}
+
+input[type="button"]:hover:not([disabled]),
+input[type="button"].hover:not([disabled]),
+button:hover:not([disabled]),
+button.hover:not([disabled]) {
+    background:rgba(0,0,0,0.1);
+    box-shadow:none;
+}
+
+input[type="button"]:active:not([disabled]),
+input[type="button"].active:not([disabled]),
+button:active:not([disabled]),
+button.active:not([disabled]) {
+    background:rgba(0,0,0,0.2);
+    box-shadow:none;
+}
+
+input[type="submit"]:hover:not([disabled]),
+input[type="submit"].hover:not([disabled]),
+button.major:hover:not([disabled]),
+button.major.hover:not([disabled]) {
+    background:#09f;
+}
+
+input[type="submit"]:active:not([disabled]),
+input[type="submit"].active:not([disabled]),
+button.major:active:not([disabled]),
+button.major.active:not([disabled]) {
+    background:#07c;
+}
+
+/*
+input[type]:hover:not([disabled]),
+input[type].hover:not([disabled]),
+button:hover:not([disabled]),
+button.hover:not([disabled]) {
+    box-shadow:2px 2px 2px rgba(0,0,0,0.3);
+}
+
+input[type="button"]:active:not([disabled]),
+input[type="button"].active:not([disabled]),
+input[type="submit"]:active:not([disabled]),
+input[type="submit"].active:not([disabled]),
+button:active:not([disabled]),
+button.active:not([disabled]) {
+    box-shadow:inset 2px 2px 2px rgba(0,0,0,0.3);
+    outline:0;
+}
+*/
+
+#login-form {
+    display:none;
+    text-align:center;
+}
+
+.error-message {
+    display:block;
+    padding:8px 12px;
+    font-size:24px;
+    text-align:center;
+    color:#a00;
+}
+
+@keyframes error-flash {
+    0% {
+        background:#a00;
+        color:#eee;
+    }
+
+    100% {
+        background:transparent;
+        color:#a00;
+    }
+}
+
+.error-message.show {
+    display:block;
+    animation:error-flash 0.5s;
+}
+
+
+/* ========= */
+/*  WINDOWS  */
+/* ========= */
+.window {
+    position:fixed;
+    background:#fff;
+    min-width:200px;
+    min-height:120px;
+    color:rgba(0,0,0,0.7);
+    transition: 0.2s all;
+}
+.window.has-shadow {
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.5);
+}
+.window.closing {
+    -webkit-transform:scale(0.6);
+    -moz-transform:scale(0.6);
+    transform:scale(0.6);
+    opacity:0;
+}
+.window-header {
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:38px;
+    line-height:38px;
+    cursor:-webkit-grab;
+    cursor:grab;
+    -webkit-user-select:none;
+    user-select:none;
+    white-space:nowrap;
+    box-shadow: 0 4px 4px -2px rgba(0,0,0,0.3);
+}
+.window-header:active {
+    cursor:-webkit-grabbing;
+    cursor:grabbing;
+}
+.window.moving .window-header:active::after,
+.window.resizing .window-resizer:active::after {
+    content:"";
+    position:absolute;
+    top:-1024px;
+    left:-1024px;
+    right:-1024px;
+    bottom:-1024px;
+    z-index:9999;
+}
+.window-icon {
+    float:left;
+    height:100%;
+    padding:8px;
+}
+.window-header.mac-style .window-icon {
+    display:none;
+}
+.window-header-buttons {
+    display:inline-block;
+    color:#eee;
+    font-size:0;
+    height:100%;
+    float:left;
+    position:absolute;
+    left:0;
+    top:0;
+    transition:0.2s all;
+}
+.window-header:not(.mac-style) .window-header-buttons {
+    float:right;
+    left:initial;
+    right:0;
+}
+.window-header-buttons div {
+    display:inline-block;
+    font-size:20px;
+    padding:0 8px;
+    height:100%;
+    width:38px;
+    text-align:center;
+    background:inherit;
+    position:relative;
+    float:left;
+    cursor:pointer;
+    transition:0.2s all;
+}
+.window-header-buttons div:hover {
+    background:rgba(0,0,0,0.1);
+}
+.window-header-buttons div::before,
+.window-header-buttons div::after {
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
+    margin:auto;
+    background:rgba(0,0,0,0.7);
+}
+.window-header:not(.mac-style) div.window-header-close {
+    float:right;
+}
+.window-header-close::before,
+.window-header-close::after {
+    content:" ";
+    width:50%;
+    height:5%;
+}
+.window-header-close::before {
+    -webkit-transform:rotate(45deg);
+    -moz-transform:rotate(45deg);
+    transform:rotate(45deg);
+}
+.window-header-close::after {
+    -webkit-transform:rotate(-45deg);
+    -moz-transform:rotate(-45deg);
+    transform:rotate(-45deg);
+}
+.window-header-minimise::before {
+    content:" ";
+    width:50%;
+    height:5%;
+}
+.window div.window-header-maximise::before,
+.window div.window-header-maximise::after {
+    content:" ";
+    width:30%;
+    height:30%;
+    background:inherit;
+    border:2px solid #eee;
+}
+div.window.maximised div.window-header-maximise::before {
+    width:25%;
+    height:25%;
+    margin-bottom:40%;
+    margin-right:40%;
+}
+div.window.maximised div.window-header-maximise::after {
+    width:25%;
+    height:25%;
+    margin-top:40%;
+    margin-left:40%;
+}
+
+.window-title {
+    font-size:20px;
+    font-family:"Raleway", "Helvetica", sans-serif;
+    padding:0 0 0 32px;
+    display:block;
+    margin:0;
+    color:rgba(0,0,0,0.7);
+    overflow:hidden;
+    height:100%;
+}
+.window-title * {
+    margin-bottom:0;
+}
+.window-header.mac-style .window-title {
+    padding-left:152px;
+}
+.window-content {
+    position:absolute;
+    top:38px;
+    left:0;
+    right:0;
+    bottom:0;
+}
+.window-body {
+    padding:18px 24px;
+    overflow:auto;
+    width:100%;
+}
+
+.window.dialog .window-body {
+    bottom: 48px;
+    top: 0;
+    position: absolute;
+}
+
+.window-body::-webkit-scrollbar-track {
+    margin-bottom:16px;
+}
+
+.window .window-resizer {
+    position:absolute;
+    bottom:0;
+    right:0;
+    width:16px;
+    height:16px;
+    background:url(../../res/jswm-resizer.png);
+    cursor:se-resize;
+}
+
+fieldset.dialog-options {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px 12px;
+    border-top: 1px solid rgba(0,0,0,0.2);
+    height: 48px;
+}
+
+.dialog-choices {
+    float: right;
+}
+
+input[type="checkbox"] {
+    border: 2px solid rgba(0,0,0,0.2);
+    border-radius: 3px;
+    margin: 0;
+    display: inline-block;
+    cursor: pointer;
+    box-shadow:none;
+    font-size:0;
+}
+input[type="checkbox"]::after {
+    border-width: 0 3px 3px 0;
+    margin-bottom: 25%;
+    margin-left: 35%;
+}
+
+input[type="checkbox"]:checked {
+    box-shadow:none;
+    background:#69a;
+
+}
+input[type="checkbox"]:checked::after {
+    height: 65%;
+    width: 35%;
+    border-color: #fff;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="password"] {
+    font-size: 18px;
+    border-bottom: 2px solid rgba(0,0,0,0.3);
+    display: inline-block;
+    background:none;
+}
+
+input[type="text"].login-username,
+input[type="password"].login-password {
+    font-size:24px;
+    display:block;
+}
+
+input[type].login-submit {
+    font-size:18px;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus {
+    border-bottom: 2px solid rgb(102, 153, 170);
+}
+
+input[type="range"] {
+    padding-left:0;
+    padding-right:0;
+}
+
+input[type="range"]::-webkit-slider-thumb::before {
+    background:#69a;
+}
+
+label {
+    padding: 8px 16px;
+}
+label.small-label {
+    display:block;
+    font-size:14px;
+    padding:0;
+}
+
+.styled-select ul {
+    position: absolute;
+    z-index: 2;
+    background: #f2f2f2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    transition: 0.2s all;
+}
+
+.styled-select ul li:hover {
+    background: rgba(0,0,0,0.05);
+    color: rgba(0,0,0,0.7);
+}
+
+.styled-select ul li {
+    color: rgba(0,0,0,0.7);
+    transition: 0.2s all;
+}
+
+.styled-select ul li:active {
+    background: rgba(0,0,0,0.1);
+}
