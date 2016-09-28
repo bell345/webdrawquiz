@@ -52,7 +52,7 @@
              "assets/js/jswm2.js"], function () {
 
         ws = new WSManager("host_sid");
-        ws.open("api/v1/ws/host");
+        ws.open("../api/v1/ws/host");
 
         $(window).on("beforeunload", function () { ws.close(); });
 

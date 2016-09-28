@@ -21,17 +21,18 @@ server.on("request", app);
 
 // view engine setup
 var viewsDir = path.join(__dirname, 'views');
+var partialsDir = path.join(viewsDir, 'partials');
 app.set('views', viewsDir);
 app.set('view engine', 'hbs');
 
 // From https://gist.github.com/benw/3824204.
 // Sets up handlebars partials for everything in the /views directory.
-fs.readdirSync(viewsDir).forEach(function (filename) {
+fs.readdirSync(partialsDir).forEach(function (filename) {
     var matches = /^([^.]+).hbs$/.exec(filename);
     if (!matches) return;
 
     var name = matches[1];
-    var template = fs.readFileSync(path.join(viewsDir, filename), 'utf8');
+    var template = fs.readFileSync(path.join(partialsDir, filename), 'utf8');
     hbs.registerPartial(name, template);
 });
 

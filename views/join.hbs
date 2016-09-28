@@ -14,7 +14,7 @@
 
             $.ajax({
                 type: "POST",
-                url: "/api/v1/join",
+                url: "api/v1/join",
                 contentType: "application/json",
                 processData: false,
                 data: {
@@ -24,7 +24,7 @@
                 success: function (res, status, xhr) {
                     if (res.host_sid) {
                         createCookie("contestant_sid", res.host_sid);
-                        location.replace("play");
+                        location.replace("play/");
                     } else {
                         $(".error-message").addClass("show")
                                 .html("Got unexpected response from server.");

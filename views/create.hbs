@@ -27,7 +27,7 @@
 
             $.ajax({
                 type: "POST",
-                url: "/api/v1/create",
+                url: "api/v1/create",
                 contentType: "application/json",
                 processData: false,
                 data: {
@@ -44,7 +44,7 @@
                 success: function (res, status, xhr) {
                     if (res.host_sid) {
                         createCookie("host_sid", res.host_sid);
-                        location.replace("admin");
+                        location.replace("admin/");
                     } else {
                         $(".error-message").addClass("show")
                                 .html("Got unexpected response from server.");

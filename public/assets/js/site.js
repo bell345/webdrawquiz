@@ -64,7 +64,7 @@ WSManager.prototype = {
             protocol = "wss://";
 
         if (endpoint || !this.uri)
-            this.uri = protocol + location.host + "/" + (endpoint || "");
+            this.uri = protocol + location.host + location.pathname + (endpoint || "");
 
         this.socket = new WebSocket(this.uri);
 
