@@ -4,6 +4,7 @@
  * MIT Licensed
  */
 var error = require("./error"),
+    debug = require("debug")("webdrawquiz:server"),
     Join = require("./join"),
     Create = require("./create");
 
@@ -17,10 +18,10 @@ function GameServer(config) {
 
     this.model = config.model;
 
-    this.debug = config.debug ? function (l) { console.log(l); } : function () {};
+    this.debug = config.debug ? debug : function () {};
 }
 
-GameServer.prototype.create = function (title, questions, callback) {
+GameServer.prototype.create = function () {
     var self = this;
     return function (req, res, next) {
         return new Create(self, req, res, next);

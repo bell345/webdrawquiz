@@ -1,0 +1,168 @@
+{{> includes base="../" }}
+<style>
+    div.show {
+        display:block;
+    }
+    .unauthenticated, .admin-panel, .only-started-quiz {
+        display:none;
+    }
+    .timeout-display {
+        font-size:38px;
+        font-weight:bold;
+    }
+</style>
+<script>
+    var wm, ws, question_id, contestants = {};
+
+    function startQuiz() {
+        ws.send("start", {}, function (msg) {
+            $(".quiz-title").text(msg.title);
+        });
+    }
+
+    function endQuiz() {
+        ws.send("conclusion", {});
+    }
+
+    function markResponseAsCorrect(response_id) {
+        var payload = {};
+        payload.response_id = response_id;
+        payload.correct = true;
+        ws.send("evaluate", payload);
+    }
+
+    function updatePlayers() {
+        var names = [];
+        for (var prop in contestants) if (contestants.hasOwnProperty(prop)) {
+            names.push(contestants[prop]);
+        }
+
+        $(".players-display").text(names.join(", "));
+    }
+
+    function zeroPrefix(s, n, c) {
+        s = s.toString();
+        c = c || '0';
+        return (new Array(n - s.length + 1)).join(c) + s;
+    }
+
+    $(function () {
+    Require(["assets/js/tblib/loader.js",
+             "assets/js/tblib/ui.js",
+             "assets/js/jswm2.js"], function () {
+
+        ws = new WSManager("host_sid");
+        ws.open("api/v1/ws/host");
+
+        $(window).on("beforeunload", function () { ws.close(); });
+
+        loader.addTask(function (resolve) {
+            if (ws.authenticated) resolve();
+            else ws.on("authenticated", function () { resolve(); });
+        }, 2000, "websocket");
+
+        loader.start();
+
+        $(document).on("pageload", function () {
+            wm = new JSWM($("body")[0]);
+
+            if (ws.authenticated) {
+                $(".admin-panel").addClass("show");
+            } else {
+                $(".unauthenticated").addClass("show");
+            }
+
+            ws.on("message-type.start", function (msg) {
+                $(".quiz-title").text(msg.title);
+            });
+
+            ws.on("message-type.question", function (msg) {
+                question_id = msg.question_id;
+                $(".quiz-question-display").text(msg.question);
+                $(".quiz-answer-display").text(msg.answer);
+
+                var expiry = new Date(msg.timeout).getTime();
+                setInterval(function () {
+                    var timeRemaining = Math.max(expiry - new Date().getTime(), 0);
+                    var minutes = Math.floor(timeRemaining / (1000 * 60));
+                    var seconds = Math.floor(timeRemaining / 1000) % 60;
+                    $(".timeout-display").text(
+                            zeroPrefix(minutes, 2) +
+                            ":" +
+                            zeroPrefix(seconds.toFixed(2), 5));
+                }, 1);
+            });
+
+            ws.on("message-type.contestant", function (msg) {
+                if (msg.status == "connected") {
+                    contestants[msg.contestant_id] = msg;
+                } else if (msg.status == "disconnected") {
+                    if (contestants[msg.contestant_id] !== undefined)
+                        delete contestants[msg.contestant_id];
+                }
+
+                updatePlayers();
+            });
+
+            $(".start-quiz").click(function () { startQuiz(); });
+            $(".end-quiz").click(function () { endQuiz(); });
+        });
+    });
+    });
+</script>
+{{> header }}
+<main>
+    <div class="hero-container">
+        <h2>Administrate Quiz</h2>
+        <h3 class="quiz-title"></h3>
+    </div>
+    <div class="unauthenticated">
+        <p>
+            Create a quiz here:
+        </p>
+        <div class="control-row">
+            <a href="create"><button class="major">Create Quiz</button></a>
+        </div>
+    </div>
+    <div class="admin-panel">
+        <div class="control-row">
+            <button class="major start-quiz">Start Quiz</button>
+        </div>
+        <div class="only-started-quiz">
+            <div class="control-row">
+                <button class="major next-question">Next Question</button>
+                <button class="end-quiz">End Quiz</button>
+            </div>
+            <div class="control-row">
+                <h3><q class="quiz-question-display"></q></h3>
+                <h3 class="quiz-answer-display"></h3>
+            </div>
+            <div class="control-row">
+                <div>
+                    Time remaining:
+                </div>
+                <span class="timeout-display"></span>
+            </div>
+            <div class="control-row">
+                <div>
+                    Players:
+                </div>
+                <span class="players-display"></span>
+            </div>
+            <table class="main quiz-responses">
+                <thead>
+                    <tr>
+                        <th>Contestant</th>
+                        <th>Response</th>
+                        <th>Correct</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>

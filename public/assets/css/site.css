@@ -82,6 +82,9 @@ html {
     transition:0.2s all;
     font-family:"Lato", "Open Sans", "Helvetica", "Arial", sans-serif;
 }
+* {
+    font-family:"Lato", "Open Sans", "Helvetica", "Arial", sans-serif;
+}
 *, *::before, *::after {
     margin:0;
     padding:0;

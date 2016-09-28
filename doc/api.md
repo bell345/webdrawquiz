@@ -56,7 +56,8 @@ The following is a description of the WebSocket API.
 
 WebSocket connections are initiated at:
 
-    /api/v1/ws
+    /api/v1/ws/host for hosts
+    /api/v1/ws/contestant for contestants
 
 All messages (including errors) take the form:
 
@@ -160,6 +161,15 @@ To server from host:
 "timeout" is a UNIX timestamp denoting when no more responses can be submitted.
 
 To host from server:
+
+    {
+        "question_id": string,
+        "question": string,
+        "answer": string,
+        "timeout": integer,
+        "score": integer
+    }
+
 To contestant from server:
 
     {
@@ -198,9 +208,14 @@ To contestant from server:
 
 ### type: "close"
 
+This message closes the connection of one or all of the contestants.
+
+A "contestant_id" value of `null` closes the connection for all contestants.
+
 To server from host:
 
     {
+        "contestant_id": string,
         "reason": string
     }
 

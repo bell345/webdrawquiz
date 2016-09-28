@@ -1,5 +1,35 @@
+<style>
+    * {
+        margin:0;
+        padding:0;
+        border:0;
+        font-family:sans-serif;
+    }
+
+    body {
+        background: linear-gradient(45deg, #d2d2d2, #d2d2d2 50%, #ddd 50%, #ddd) 0 0 / 50px 50px;
+    }
+
+    main {
+        display:inline-block;
+        width:58%;
+        position:absolute;
+        left:0;
+        right:0;
+        padding:28px 5%;
+        background:#eee;
+        color:#333;
+        box-shadow:2px 2px 0 rgba(0,0,0,0.4);
+        margin:28px auto;
+    }
+
+    pre {
+        overflow:auto;
+        font-family:monospace;
+    }
+</style>
 <main>
-    <h1>{{message}}</h1>
-    <h2>{{error.status}}</h2>
+    <h2>{{message}}</h2>
+    <h3>{{error.status}}</h3>
     <pre>{{error.stack}}</pre>
 </main>

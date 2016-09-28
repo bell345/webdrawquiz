@@ -4,6 +4,7 @@
  * MIT Licensed
  */
 var mongoose = require("mongoose"),
+    debug = require("debug")("webdrawquiz:mongo"),
     schema = require("./schema"),
     Quiz = schema.Quiz,
     Contestant = schema.Contestant,
@@ -15,9 +16,9 @@ var mongoose = require("mongoose"),
 mongoose.connect(connectionString);
 
 var db = mongoose.connection;
-db.on("error", console.error.bind(console, "DB connection error: "));
+db.on("error", debug.bind(this, "DB connection error: "));
 db.once("open", function () {
-    console.log("Connected to DB");
+    debug("Connected to DB");
 });
 
 function zeroPrefix(s, n, c) {

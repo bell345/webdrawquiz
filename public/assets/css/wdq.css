@@ -6,7 +6,7 @@ header {
     height:48px;
     background:#3c4e56;
     padding:0 17%;
-    box-shadow:4px 4px 8px rgba(30,45,60,0.7);
+    box-shadow:0 0 8px 4px rgba(30,45,60,0.7);
     z-index:99;
 }
 nav > ul > li {
@@ -56,6 +56,7 @@ main {
     padding:18px 24px;
     background:#079;
     color:#eee;
+    margin-bottom:12px;
 }
 .large-option {
     width:20%;
@@ -73,4 +74,22 @@ main {
     font-size:52px;
     display:block;
     padding:12px;
+}
+
+table.quiz-questions textarea {
+    width:100% !important;
+    min-width:100%;
+    max-width:100%;
+    background:none;
+    font-family:"Lato", "Open Sans", "Helvetica", "Arial", sans-serif;
+    border-bottom:2px solid rgba(0,0,0,0.3);
+    font-size:18px;
+}
+table.quiz-questions input[type="number"] {
+    width:80px;
+    font-size:18px;
+}
+table.quiz-questions textarea:focus {
+    border-bottom:2px solid #69a;
+    outline:none;
 }

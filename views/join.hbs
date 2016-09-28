@@ -1,0 +1,71 @@
+{{> includes base="../" }}
+<style>
+    input[type='text'].quiz-code {
+        font-size:28px;
+        text-align:center;
+        width:120px;
+    }
+</style>
+<script>
+    $(function () {
+        $(".join-quiz").click(function () {
+
+            $(".error-message").removeClass("show");
+
+            $.ajax({
+                type: "POST",
+                url: "/api/v1/join",
+                contentType: "application/json",
+                processData: false,
+                data: {
+                    "quiz_code": $(".quiz-code").val(),
+                    "name": $(".contestant-name").val()
+                },
+                success: function (res, status, xhr) {
+                    if (res.host_sid) {
+                        createCookie("contestant_sid", res.host_sid);
+                        location.replace("play");
+                    } else {
+                        $(".error-message").addClass("show")
+                                .html("Got unexpected response from server.");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    try {
+                        var obj = JSON.parse(xhr.responseText);
+                        if (obj.error_description)
+                            $(".error-message").addClass("show")
+                                    .html(obj.error_description);
+                        else
+                            $(".error-message").addClass("show")
+                                    .html("Error: " + obj.error_type);
+                    } catch (e) {
+                        $(".error-message").addClass("show")
+                                .html(error);
+                    }
+                }
+            });
+        });
+    });
+</script>
+{{> header }}
+<main>
+    <div class="hero-container">
+        <h2>Join Quiz</h2>
+    </div>
+    <div class="quiz-creation">
+        <div class="control-row">
+            <span class="error-message"></span>
+        </div>
+        <div class="control-row">
+            <input type="text" class="contestant-name" placeholder="Name" name="name" />
+        </div>
+        <div class="control-row">
+            <div>Enter code:</div>
+            <input type="text" class="quiz-code" placeholder="xxxx" name="code" />
+        </div>
+        <div class="control-row">
+            <button class="major join-quiz">Join Quiz</button>
+        </div>
+    </div>
+</main>

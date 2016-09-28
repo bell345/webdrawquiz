@@ -4,18 +4,36 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var http = require("http");
+var fs = require("fs");
+var hbs = require("hbs");
 
 var routes = require('./routes/index');
 
 var GameServer = require("./game");
 var model = require("./models/mongo");
 var api = require("./api");
+var wsapi = require("./api/ws");
 
+var server = http.createServer();
 var app = express();
+server.on("request", app);
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views'));
+var viewsDir = path.join(__dirname, 'views');
+app.set('views', viewsDir);
 app.set('view engine', 'hbs');
+
+// From https://gist.github.com/benw/3824204.
+// Sets up handlebars partials for everything in the /views directory.
+fs.readdirSync(viewsDir).forEach(function (filename) {
+    var matches = /^([^.]+).hbs$/.exec(filename);
+    if (!matches) return;
+
+    var name = matches[1];
+    var template = fs.readFileSync(path.join(viewsDir, filename), 'utf8');
+    hbs.registerPartial(name, template);
+});
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
@@ -29,10 +47,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', routes);
 
 var game = new GameServer({
-    model: model
+    model: model,
+    debug: true
 });
 
 app.use("/api/v1", api(game));
+app.use("/api/v1/ws", wsapi(server, "/api/v1/ws", game));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -69,4 +89,4 @@ app.use(function(err, req, res, next) {
 });
 
 
-module.exports = app;
+module.exports = server;

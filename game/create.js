@@ -28,30 +28,30 @@ function Create(config, req, res, next) {
 
 function validate(done) {
     if (!this.req.is("application/json"))
-        return next(error("bad_request",
+        return done(error("bad_request",
             "Request is required to be in application/json format."));
 
     if (!this.req.body["title"])
-        return next(error("invalid_client",
+        return done(error("invalid_client",
             "A title must be provided."));
 
     var qs = this.req.body["questions"];
     if (!qs || !(qs instanceof Array) || qs.length < 1)
-        return next(error("invalid_client",
+        return done(error("invalid_client",
             "At least one question must be provided."));
 
     for (var i=0;i<qs.length;i++) {
         var question = qs[i];
         if (!question["question"] || !question["answer"] || !question["time_limit"] || !question["score"])
-            return next(error("invalid_client",
+            return done(error("invalid_client",
                 "Each question must have a 'question', 'answer', 'time_limit' and 'score'."));
 
         if (isNaN(parseInt(question["time_limit"])) || question["time_limit"] <= 0)
-            return next(error("invalid_client",
+            return done(error("invalid_client",
                 "The time limit must be a positive integer for each question."));
 
         if (isNaN(parseInt(question["score"])) || question["score"] <= 0)
-            return next(error("invalid_client",
+            return done(error("invalid_client",
                 "The score must be a positive integer for each question."));
     }
 
