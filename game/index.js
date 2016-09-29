@@ -5,6 +5,7 @@
  */
 var error = require("./error"),
     debug = require("debug")("webdrawquiz:server"),
+    Instance = require("./instance"),
     Join = require("./join"),
     Create = require("./create");
 
@@ -19,6 +20,8 @@ function GameServer(config) {
     this.model = config.model;
 
     this.debug = config.debug ? debug : function () {};
+
+    this.instances = {};
 }
 
 GameServer.prototype.create = function () {
@@ -32,6 +35,18 @@ GameServer.prototype.join = function () {
     var self = this;
     return function (req, res, next) {
         return new Join(self, req, res, next);
+    }
+};
+
+GameServer.prototype.getInstance = function (quiz_id) {
+    if (this.instances[quiz_id] !== undefined)
+        return this.instances[quiz_id];
+
+    else {
+        var instance = new Instance(this, quiz_id);
+        this.debug("New instance created (%s)", quiz_id);
+        this.instances[quiz_id] = instance;
+        return instance;
     }
 };
 

@@ -1,0 +1,122 @@
+{{> includes base="../" }}
+<style>
+    .drawing-container {
+        position:fixed;
+        top:0;
+        left:0;
+        right:0;
+        bottom:72px;
+        background:white;
+    }
+    .toolbox-container {
+        position:fixed;
+        left:0;
+        right:0;
+        bottom:0;
+        height:72px;
+        background:#eee;
+    }
+    .toolbox {
+        display:flex;
+        height:100%;
+        width:100%;
+        text-align:center;
+        flex-flow:row nowrap;
+        justify-content:space-around;
+        align-items:center;
+        vertical-align:middle;
+        font-size:36px;
+    }
+    .toolbox li {
+        display:inline-block;
+        flex-grow:1;
+        height:100%;
+        line-height:72px;
+        transition:all 0s, border-bottom 0.2s, background 0.2s;
+        border-bottom:6px solid transparent;
+    }
+    .toolbox i.material-icons {
+        line-height:inherit;
+        font-size:36px;
+    }
+    .toolbox-submit {
+        background:#08d;
+        color:#eee;
+    }
+    .toolbox li.active {
+        background:rgba(0,0,0,0.2);
+        border-bottom-color:#08d;
+    }
+
+
+</style>
+<script>
+    var ws;
+
+    $(function () {
+    Require(["assets/js/tblib/loader.js",
+             "assets/js/tblib/ui.js",
+             "assets/js/jswm2.js"], function () {
+
+        ws = new WSManager("webdrawquiz.contestant_sid");
+        ws.open("../api/v1/ws/contestant");
+
+        $(window).on("beforeunload", function () { ws.close(); });
+
+        loader.addTask(function (resolve) {
+            if (ws.authenticated) resolve();
+            else ws.on("authenticated", function () { resolve(); });
+        }, 2000, "websocket");
+
+        loader.start();
+        displayOverlay("disconnected");
+
+        $(document).on("pageload", function () {
+            if (ws.authenticated) {
+                hideOverlay();
+            } else {
+                displayOverlay("unauthenticated");
+            }
+
+        });
+    });
+    });
+</script>
+</head>
+<body>
+<div class="drawing-container">
+    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="drawing-plane"></svg>
+</div>
+<div class="toolbox-container">
+    <ul class="toolbox">
+        <li class="toolbox-pen">
+            <i class="material-icons">brush</i>
+        </li>
+        <li class="toolbox-eraser">
+            <i class="material-icons">delete</i>
+        </li>
+        <li class="toolbox-submit">
+            <i class="material-icons">send</i>
+        </li>
+        <li class="toolbox-time-remaining text-item">
+            <span class="time-remaining">00:00</span>
+        </li>
+    </ul>
+</div>
+<div class="overlay-container">
+
+    <div class="unauthenticated">
+        <p>
+            Join a quiz:
+        </p>
+        <a href="join/"><button class="major">Join Quiz</button></a>
+    </div>
+    <div class="disconnected">
+        <p>
+            Connecting...
+        </p>
+    </div>
+    <div class="error">
+
+    </div>
+</div>

@@ -6,7 +6,7 @@
     .unauthenticated, .admin-panel, .only-started-quiz {
         display:none;
     }
-    .timeout-display {
+    .timeout-display, .quiz-code-display {
         font-size:38px;
         font-weight:bold;
     }
@@ -34,7 +34,7 @@
     function updatePlayers() {
         var names = [];
         for (var prop in contestants) if (contestants.hasOwnProperty(prop)) {
-            names.push(contestants[prop]);
+            names.push(contestants[prop].contestant_name);
         }
 
         $(".players-display").text(names.join(", "));
@@ -51,7 +51,7 @@
              "assets/js/tblib/ui.js",
              "assets/js/jswm2.js"], function () {
 
-        ws = new WSManager("host_sid");
+        ws = new WSManager("webdrawquiz.host_sid");
         ws.open("../api/v1/ws/host");
 
         $(window).on("beforeunload", function () { ws.close(); });
@@ -61,6 +61,38 @@
             else ws.on("authenticated", function () { resolve(); });
         }, 2000, "websocket");
 
+        ws.on("message-type.start", function (e, msg) {
+            $(".quiz-title").text(msg.title);
+        });
+
+        ws.on("message-type.question", function (e, msg) {
+            question_id = msg.question_id;
+            $(".quiz-question-display").text(msg.question);
+            $(".quiz-answer-display").text(msg.answer);
+
+            var expiry = new Date(msg.timeout).getTime();
+            setInterval(function () {
+                var timeRemaining = Math.max(expiry - new Date().getTime(), 0);
+                var minutes = Math.floor(timeRemaining / (1000 * 60));
+                var seconds = Math.floor(timeRemaining / 1000) % 60;
+                $(".timeout-display").text(
+                        zeroPrefix(minutes, 2) +
+                        ":" +
+                        zeroPrefix(seconds.toFixed(2), 5));
+            }, 1);
+        });
+
+        ws.on("message-type.contestant", function (e, msg) {
+            if (msg.status == "connected") {
+                contestants[msg.contestant_id] = msg;
+            } else if (msg.status == "disconnected") {
+                if (contestants[msg.contestant_id] !== undefined)
+                    delete contestants[msg.contestant_id];
+            }
+
+            updatePlayers();
+        });
+
         loader.start();
 
         $(document).on("pageload", function () {
@@ -68,44 +100,17 @@
 
             if (ws.authenticated) {
                 $(".admin-panel").addClass("show");
+                $(".quiz-code-display").text(
+                        readCookie("webdrawquiz.quiz_code")
+                );
             } else {
                 $(".unauthenticated").addClass("show");
             }
 
-            ws.on("message-type.start", function (msg) {
-                $(".quiz-title").text(msg.title);
-            });
-
-            ws.on("message-type.question", function (msg) {
-                question_id = msg.question_id;
-                $(".quiz-question-display").text(msg.question);
-                $(".quiz-answer-display").text(msg.answer);
-
-                var expiry = new Date(msg.timeout).getTime();
-                setInterval(function () {
-                    var timeRemaining = Math.max(expiry - new Date().getTime(), 0);
-                    var minutes = Math.floor(timeRemaining / (1000 * 60));
-                    var seconds = Math.floor(timeRemaining / 1000) % 60;
-                    $(".timeout-display").text(
-                            zeroPrefix(minutes, 2) +
-                            ":" +
-                            zeroPrefix(seconds.toFixed(2), 5));
-                }, 1);
-            });
-
-            ws.on("message-type.contestant", function (msg) {
-                if (msg.status == "connected") {
-                    contestants[msg.contestant_id] = msg;
-                } else if (msg.status == "disconnected") {
-                    if (contestants[msg.contestant_id] !== undefined)
-                        delete contestants[msg.contestant_id];
-                }
-
-                updatePlayers();
-            });
 
             $(".start-quiz").click(function () { startQuiz(); });
             $(".end-quiz").click(function () { endQuiz(); });
+
         });
     });
     });
@@ -128,6 +133,18 @@
         <div class="control-row">
             <button class="major start-quiz">Start Quiz</button>
         </div>
+        <div class="control-row">
+            <p>
+                Quiz code:
+            </p>
+            <span class="quiz-code-display"></span>
+        </div>
+        <div class="control-row">
+            <div>
+                Players:
+            </div>
+            <span class="players-display"></span>
+        </div>
         <div class="only-started-quiz">
             <div class="control-row">
                 <button class="major next-question">Next Question</button>
@@ -143,18 +160,12 @@
                 </div>
                 <span class="timeout-display"></span>
             </div>
-            <div class="control-row">
-                <div>
-                    Players:
-                </div>
-                <span class="players-display"></span>
-            </div>
             <table class="main quiz-responses">
                 <thead>
                     <tr>
                         <th>Contestant</th>
                         <th>Response</th>
-                        <th>Correct</th>
+                        <th><i class="material-icons">check</i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,3 +177,8 @@
         </div>
     </div>
 </main>
+<div class="overlay-container">
+    <div class="error">
+
+    </div>
+</div>

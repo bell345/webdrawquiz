@@ -4,36 +4,67 @@
  * MIT Licensed
  */
 
-var wm;
-
+//function reportError(message, error) {
+//    if (!error) error = null;
+//    else if (error.responseJSON) error = error.responseJSON;
+//    else if (error.responseText) try {
+//        error = JSON.parse(error.responseText);
+//    } catch (e) { error = error.responseText; }
+//    else if (error.statusText) error = error.statusText;
+//
+//    var errtext = error
+//        ? "<code>" + (error.error_description || error) + "</code>"
+//        : "";
+//
+//    wm.spawn(JSWM.Dialog, "An error occurred.",
+//        "<p>" + message + "</p>" +
+//        errtext,
+//        { x: "8%", y: "8%", width: "84%", height: "84%",
+//            shadow: true, dialogOptions: JSWM.DialogOptions.ok }
+//    );
+//
+//    //$(".shadow").addClass("show");
+//    //var $note = $(".fullscreen-notification");
+//    //$note.find("h2").html("An error occurred.");
+//    //$note.find("div.body").html(
+//    //    "<p>" + message + "</p>"
+//    //    + (error
+//    //        ? "<pre><code>" + (error.error_description || error) + "</code></pre>"
+//    //        : "")
+//    //);
+//}
 function reportError(message, error) {
     if (!error) error = null;
     else if (error.responseJSON) error = error.responseJSON;
     else if (error.responseText) try {
         error = JSON.parse(error.responseText);
-    } catch (e) { error = error.responseText; }
+    } catch (e) { error = error.responseText }
     else if (error.statusText) error = error.statusText;
 
     var errtext = error
-        ? "<code>" + (error.error_description || error) + "</code>"
-        : "";
+            ? (error.error_description || error)
+            : "";
 
-    wm.spawn(JSWM.Dialog, "An error occurred.",
-        "<p>" + message + "</p>" +
-        errtext,
-        { x: "8%", y: "8%", width: "84%", height: "84%",
-            shadow: true, dialogOptions: JSWM.DialogOptions.ok }
+    displayOverlay("error",
+            "<h2>An error has occurred</h2>"
+            + "<h4>" + message + "</h4>"
+            + "<p>" + errtext + "</p>"
+            + "<button onclick='hideOverlay();'>OK</button>"
+            + "<button onclick='location.reload();'>Reload</button>"
     );
+}
 
-    //$(".shadow").addClass("show");
-    //var $note = $(".fullscreen-notification");
-    //$note.find("h2").html("An error occurred.");
-    //$note.find("div.body").html(
-    //    "<p>" + message + "</p>"
-    //    + (error
-    //        ? "<pre><code>" + (error.error_description || error) + "</code></pre>"
-    //        : "")
-    //);
+function displayOverlay(overlay_name, contents) {
+    hideOverlay();
+    $(".overlay-container").addClass("show");
+    var overlay = $(".overlay-container > div." + overlay_name);
+    overlay.addClass("show");
+    if (contents) overlay.html(contents);
+}
+
+function hideOverlay() {
+    $(".overlay-container > div").removeClass("show");
+    $(".overlay-container").removeClass("show");
 }
 
 function WSManager(auth_cookie) {

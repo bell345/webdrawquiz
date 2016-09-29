@@ -105,10 +105,28 @@ model.addContestant = function (quiz_code, sid, name, callback) {
 };
 
 model.hostAuth = function (host_sid, callback) {
-    Quiz.findOne({ host_sid: host_sid }, callback);
+    Quiz.findOne({ host_sid: host_sid }, function (err, quiz) {
+        if (err) return callback(err);
+
+        return callback(null, quiz._id);
+    });
 };
 
 model.contestantAuth = function (sid, callback) {
-    Contestant.findOne({ sid: sid }, callback);
+    Contestant.findOne({ sid: sid }, function (err, contestant) {
+        if (err) return callback(err);
+
+        if (!contestant)
+            return callback(null); // no db error, sid invalid
+
+        Quiz.findOne({ _id: contestant.quiz_id }, function (err, quiz) {
+            if (err) return callback(err);
+
+            return callback(null, contestant._id, quiz._id);
+        });
+    });
 };
 
+model.getContestantInfo = function (contestant_id, callback) {
+    Contestant.findOne({ _id: contestant_id }, callback);
+};

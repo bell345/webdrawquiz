@@ -5,10 +5,15 @@
  */
 var error = require("../error"),
     send = require("../send"),
+    Host = require("./host"),
     parse = require("../parse");
 
 module.exports = function (game) {
     return function (ws, req, next) {
+        var closeHandler = function () {
+            ws.host.disconnect();
+            delete ws.host;
+        };
         var handler = parse(function (err, msg) {
             if (err) return next(err);
 
@@ -17,11 +22,11 @@ module.exports = function (game) {
                     return next(error("bad_request",
                         "Messages of type 'auth' require the token field.", msg));
 
-                game.model.hostAuth(msg.token, function (err, token) {
+                game.model.hostAuth(msg.token, function (err, quiz_id) {
                     if (err) return next(error("server_error",
                         "There was a problem during authentication.", msg, err));
 
-                    if (!token) return next(error("invalid_client",
+                    if (!quiz_id) return next(error("invalid_client",
                         "The token provided was invalid or has expired."));
 
                     send(ws, {
@@ -29,7 +34,15 @@ module.exports = function (game) {
                         authenticated: true
                     }, msg);
                     ws.authenticated = req.authenticated = "host";
+                    ws.token = msg.token;
+
+                    var instance = game.getInstance(quiz_id);
+                    ws.host = new Host(
+                        instance, ws, quiz_id
+                    );
+                    instance.hostConnect(ws.host);
                     ws.removeListener("message", handler);
+                    ws.on('close', closeHandler);
 
                     next();
                 });

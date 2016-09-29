@@ -8,6 +8,7 @@ var error = require("./error"),
     contestantAuth = require("./contestant/auth"),
     parse = require("./parse"),
     send = require("./send"),
+    printf = require("printf"),
     express = require("express"),
     ws = require("express-ws");
 
@@ -29,7 +30,8 @@ module.exports = function (server, prefix, game) {
         switch (msg.type) {
             default:
                 return next(error("not_found",
-                    "The requested message type was unhandled."), msg);
+                    printf("The requested message type '%s' was unhandled.",
+                        msg.type), msg));
         }
     }));
 
@@ -38,7 +40,8 @@ module.exports = function (server, prefix, game) {
         switch (msg.type) {
             default:
                 return next(error("not_found",
-                    "The requested message type was unhandled."), msg);
+                    printf("The requested message type '%s' was unhandled.",
+                        msg.type), msg));
         }
     }));
 

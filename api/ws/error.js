@@ -28,16 +28,23 @@ function WSAPIError(spec, description, msg, error) {
     this.error_description = description || error;
     this.message = msg;
 }
+
 util.inherits(WSAPIError, Error);
+
+WSAPIError.prototype.send = function (ws) {
+    debug("Error: ", this.error_type, this.error_description);
+    send(ws, {
+        type: "error",
+        error_type: this.error_type,
+        error_description: this.error_description
+    }, this.message);
+};
 
 WSAPIError.handler = function () {
     return function (err, req, res, next) {
-        debug("Error: ", err.error_type, err.error_description);
-        send(req.ws, {
-            type: "error",
-            error_type: err.error_type,
-            error_description: err.error_description
-        }, err.message);
+        if (err instanceof WSAPIError)
+            err.send(req.ws);
+        else next(err);
     }
 };
 

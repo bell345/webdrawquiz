@@ -11,5 +11,6 @@ bind('/', 'index');
 bind('/admin', 'admin');
 bind('/create', 'create');
 bind('/join', 'join');
+bind('/play', 'play');
 
 module.exports = router;

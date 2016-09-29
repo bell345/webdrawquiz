@@ -22,8 +22,8 @@
                     "name": $(".contestant-name").val()
                 },
                 success: function (res, status, xhr) {
-                    if (res.host_sid) {
-                        createCookie("contestant_sid", res.host_sid);
+                    if (res.contestant_sid) {
+                        createCookie("webdrawquiz.contestant_sid", res.contestant_sid);
                         location.replace("play/");
                     } else {
                         $(".error-message").addClass("show")

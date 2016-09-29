@@ -424,3 +424,37 @@ label.small-label {
 .styled-select ul li:active {
     background: rgba(0,0,0,0.1);
 }
+.overlay-container {
+    position:fixed;
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
+    z-index:99;
+    background:rgba(0,0,0,0.4);
+    color:#eee;
+    font-size:24px;
+    text-shadow:2px 2px 4px #000;
+    display:none;
+    flex-flow:row nowrap;
+    justify-content:center;
+    align-items:center;
+    padding:32px 48px;
+}
+.overlay-container > div {
+    text-align:center;
+}
+.overlay-container > div p,
+.overlay-container > div span {
+    font-size:24px;
+    text-shadow:2px 2px 4px #000;
+}
+.overlay-container button {
+    color:#eee;
+}
+.overlay-container > div:not(.show) {
+    display:none;
+}
+.overlay-container.show {
+    display:flex;
+}

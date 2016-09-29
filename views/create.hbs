@@ -43,7 +43,8 @@
                 },
                 success: function (res, status, xhr) {
                     if (res.host_sid) {
-                        createCookie("host_sid", res.host_sid);
+                        createCookie("webdrawquiz.host_sid", res.host_sid);
+                        createCookie("webdrawquiz.quiz_code", res.quiz_code);
                         location.replace("admin/");
                     } else {
                         $(".error-message").addClass("show")
@@ -102,7 +103,7 @@
                 <tr>
                     <td><textarea class="quiz-question" placeholder="Question"></textarea></td>
                     <td><textarea class="quiz-answer" placeholder="Answer"></textarea></td>
-                    <td><button class="red-button remove-question">&Cross;</button></td>
+                    <td><button class="red-button remove-question"><i class="material-icons">close</i></button></td>
                 </tr>
             </tbody>
         </table>

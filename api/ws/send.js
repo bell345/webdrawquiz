@@ -6,9 +6,6 @@
 var debug = require("debug")("webdrawquiz:wsapi");
 module.exports = function (ws, payload, msg) {
     if (typeof payload === "object") {
-        if (ws.authenticated)
-            payload.authenticated = true;
-
         if (msg && msg.id)
             payload.id = msg.id;
 
