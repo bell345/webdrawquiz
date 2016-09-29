@@ -3,25 +3,32 @@
     div.show {
         display:block;
     }
-    .unauthenticated, .admin-panel, .only-started-quiz {
+    .unauthenticated, .admin-panel, .only-started-quiz, .only-concluded-quiz, .only-no-quiz {
         display:none;
     }
     .timeout-display, .quiz-code-display {
         font-size:38px;
         font-weight:bold;
     }
+    .winner-display {
+        font-size:24px;
+        font-weight:bold;
+        margin-bottom:16px;
+    }
 </style>
 <script>
     var wm, ws, question_id, contestants = {};
 
     function startQuiz() {
-        ws.send("start", {}, function (msg) {
-            $(".quiz-title").text(msg.title);
-        });
+        ws.send("start", {});
     }
 
     function endQuiz() {
         ws.send("conclusion", {});
+    }
+
+    function nextQuestion() {
+        ws.send("question", {});
     }
 
     function markResponseAsCorrect(response_id) {
@@ -62,23 +69,34 @@
         }, 2000, "websocket");
 
         ws.on("message-type.start", function (e, msg) {
+            if (!msg.title) {
+                return reportError("Got unexpected response from server (type='start')");
+            }
             $(".quiz-title").text(msg.title);
+            $(".only-no-quiz").removeClass("show");
+            $(".only-started-quiz").addClass("show");
         });
 
         ws.on("message-type.question", function (e, msg) {
+            if (!msg.question || !msg.question_id || !msg.answer) {
+                return reportError("Got unexpected response from server (type='question')");
+            }
             question_id = msg.question_id;
             $(".quiz-question-display").text(msg.question);
             $(".quiz-answer-display").text(msg.answer);
 
             var expiry = new Date(msg.timeout).getTime();
-            setInterval(function () {
+            var interval = setInterval(function () {
                 var timeRemaining = Math.max(expiry - new Date().getTime(), 0);
                 var minutes = Math.floor(timeRemaining / (1000 * 60));
-                var seconds = Math.floor(timeRemaining / 1000) % 60;
+                var seconds = (timeRemaining / 1000) % 60;
                 $(".timeout-display").text(
                         zeroPrefix(minutes, 2) +
                         ":" +
                         zeroPrefix(seconds.toFixed(2), 5));
+
+                if (timeRemaining === 0)
+                    clearInterval(interval);
             }, 1);
         });
 
@@ -88,15 +106,32 @@
             } else if (msg.status == "disconnected") {
                 if (contestants[msg.contestant_id] !== undefined)
                     delete contestants[msg.contestant_id];
+            } else {
+                reportError("Got unexpected response from server (type='contestant').");
             }
 
             updatePlayers();
+        });
+
+        ws.on("message-type.conclusion", function (e, msg) {
+            if (!msg.winner_id)
+                return reportError("Got unexpected response from server (type='conclusion')");
+
+            $(".only-started-quiz").removeClass("show");
+            $(".only-concluded-quiz").addClass("show");
+            var contestant = contestants[msg.winner_id];
+            if (contestant === undefined)
+                return reportError("Winning contestant is invalid or offline.");
+
+            $(".winner-display").text(contestant.name);
         });
 
         loader.start();
 
         $(document).on("pageload", function () {
             wm = new JSWM($("body")[0]);
+
+            $(".only-no-quiz").addClass("show");
 
             if (ws.authenticated) {
                 $(".admin-panel").addClass("show");
@@ -110,6 +145,7 @@
 
             $(".start-quiz").click(function () { startQuiz(); });
             $(".end-quiz").click(function () { endQuiz(); });
+            $(".next-question").click(function () { nextQuestion(); });
 
         });
     });
@@ -130,8 +166,10 @@
         </div>
     </div>
     <div class="admin-panel">
-        <div class="control-row">
-            <button class="major start-quiz">Start Quiz</button>
+        <div class="only-no-quiz">
+            <div class="control-row">
+                <button class="major start-quiz">Start Quiz</button>
+            </div>
         </div>
         <div class="control-row">
             <p>
@@ -174,6 +212,12 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="only-concluded-quiz">
+            <p>
+                The quiz is over. The winner is:
+            </p>
+            <span class="winner-display"></span>
         </div>
     </div>
 </main>

@@ -133,8 +133,7 @@ To host from server:
         "response_id"; string,
         "response_type": string,
         "response_data": string,
-        "contestant_id": string,
-        "contestant_name": string
+        "contestant_id": string
     }
 
 Errors:
@@ -175,7 +174,8 @@ To contestant from server:
     {
         "question_id": string,
         "question": string,
-        "timeout": integer
+        "timeout": integer,
+        "score": integer
     }
 
 ### type: "answer"
@@ -183,6 +183,16 @@ To contestant from server:
 This message is sent when the time for answering the question has concluded.
 The host can send this prematurely. If so, the contestants must treat it as if
 the "timeout" had expired.
+
+To server from host:
+
+    {}
+
+To host from server:
+
+    {
+        "question_id": string
+    }
 
 To contestant from server:
 

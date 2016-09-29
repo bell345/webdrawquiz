@@ -37,10 +37,8 @@ module.exports = function (game) {
                     ws.token = msg.token;
 
                     var instance = game.getInstance(quiz_id);
-                    ws.contestant = new Contestant(
-                        instance, ws, quiz_id, contestant_id
-                    );
-                    instance.contestantConnect(ws.contestant);
+                    ws.contestant = new Contestant(instance, ws, quiz_id, contestant_id);
+                    ws.contestant.connect();
                     ws.on('close', closeHandler);
 
                     ws.removeListener("message", handler);

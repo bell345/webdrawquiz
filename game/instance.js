@@ -20,7 +20,11 @@ function GameInstance(gserver, id) {
         : function () {};
 
     this.questions = [];
-    this.currentQuestion = -1;
+    this.title = null;
+    this._questionIndex = -1;
+    this.currentQuestion = null;
+    this.started = false;
+    this.ended = false;
 }
 
 GameInstance.prototype.hostConnect = function (host) {
@@ -34,6 +38,50 @@ GameInstance.prototype.contestantConnect = function (contestant) {
     if (this.host) this.host.updatePlayers();
 };
 
-GameInstance.prototype.startGame = function () {
+GameInstance.prototype.nextQuestion = function (callback) {
+    this._questionIndex++;
+    if (this._questionIndex >= this.questions.length) {
+        this.endGame(callback);
+    } else {
+        this.currentQuestion = this.questions[this._questionIndex];
+        this.currentQuestion.answerSent = false;
+        this.currentQuestion.timeout =
+            (new Date().getTime())
+            + (this.currentQuestion.time_limit * 1000);
 
+        this.host.sendQuestion(this.currentQuestion);
+        callback(null, this.currentQuestion);
+    }
+};
+
+GameInstance.prototype.endGame = function (callback) {
+    var self = this;
+
+    self.started = false;
+    self.ended = true;
+    self.currentQuestion = null;
+    self.model.getWinnerID(self.id, function (err, contestant_id) {
+        if (err) return callback(err);
+
+        self.host.announceWinner(contestant_id);
+        self.host.closeGame("There are no more questions to answer.");
+        self.model.endGame(self.id, callback);
+    });
+};
+
+GameInstance.prototype.startGame = function (callback) {
+    var self = this;
+    self.model.getTitle(self.id, function (err, title) {
+        if (err) return callback(err);
+
+        self.model.getQuestions(self.id, function (err, questions) {
+            if (err) return callback(err);
+
+            self.questions = questions;
+            self._questionIndex = -1;
+            self.started = true;
+            self.title = title;
+            return callback(null, title);
+        });
+    });
 };

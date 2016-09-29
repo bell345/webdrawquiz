@@ -11,7 +11,8 @@ var mongoose = require("mongoose"),
     Question = schema.Question,
     Response = schema.Response,
     model = module.exports,
-    connectionString = "mongodb://localhost:27017/webdrawquiz";
+    connectionString = process.env.MONGO_CONNECT
+        || "mongodb://localhost:27017/webdrawquiz";
 
 mongoose.connect(connectionString);
 
@@ -129,4 +130,88 @@ model.contestantAuth = function (sid, callback) {
 
 model.getContestantInfo = function (contestant_id, callback) {
     Contestant.findOne({ _id: contestant_id }, callback);
+};
+
+model.getQuestions = function (quiz_id, callback) {
+    Question.find({ quiz_id: quiz_id }, function (err, questions) {
+        if (err) return callback(err);
+
+        questions = questions.map(function (q) {
+            q.id = q._id;
+            return q;
+        });
+        return callback(null, questions);
+    });
+};
+
+model.getTitle = function (quiz_id, callback) {
+    Quiz.findOne({ _id: quiz_id }, function (err, quiz) {
+        if (err) return callback(err);
+
+        return callback(null, quiz.title);
+    });
+};
+
+model.submitResponse = function (question_id, contestant_id, type, data, callback) {
+    Response.remove({ question_id: question_id, contestant_id: contestant_id }, function (err) {
+        if (err) return callback(err);
+
+        var response = new Response({
+            question_id: question_id,
+            contestant_id: contestant_id,
+            type: type,
+            data: data
+        });
+        response.save(function (err, response) {
+            if (err) return callback(err);
+
+            response.id = response._id;
+            return callback(null, response);
+        });
+    });
+};
+
+model.markResponse = function (response_id, is_correct, callback) {
+    Response.update({ _id: response_id }, { correct: is_correct }, callback);
+};
+
+model.isCorrect = function (contestant_id, question_id, callback) {
+    Response.findOne({
+        contestant_id: contestant_id,
+        question_id: question_id,
+        correct: true
+    }, callback);
+};
+
+model.increaseScore = function (contestant_id, score_delta, callback) {
+    Contestant.findOne({ _id: contestant_id }, function (err, contestant) {
+        if (err) return callback(err);
+
+        contestant.score += score_delta;
+        contestant.save(function (err, contestant) {
+            if (err) return callback(err);
+
+            return callback(null, contestant.score);
+        });
+    });
+};
+
+model.getWinnerID = function (quiz_id, callback) {
+    Contestant.find({ quiz_id: quiz_id })
+        .sort({ score: 'descending' })
+        .exec(function (err, contestants) {
+            if (err) return callback(err);
+            if (!contestants) return callback(null);
+
+            var contestant = contestants[0];
+            return callback(null, contestant._id);
+        });
+};
+
+model.endGame = function (quiz_id, callback) {
+    Quiz.update({ _id: quiz_id }, { host_sid: null }, function (err) {
+        if (err) return callback(err);
+
+        Contestant.update({ quiz_id: quiz_id }, { sid: null }, callback);
+    });
 };

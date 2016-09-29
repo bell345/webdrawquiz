@@ -15,61 +15,207 @@ function Host(instance, ws, id) {
     this.ws = ws;
     this.id = id;
     this.address = ws.upgradeReq.socket.remoteAddress;
-
-    this.instance.debug("Host connected (%s)", this.address);
 }
+Host.prototype.connect = function () {
+    this.instance.hostConnect(this);
+    this.instance.debug("Host connected (%s)", this.address);
+
+    if (this.instance.started) {
+        send(this.ws, {
+            "type": "start",
+            "title": this.instance.title
+        });
+
+        if (this.instance.currentQuestion !== null) {
+            this.sendQuestion(this.instance.currentQuestion, true);
+        }
+    }
+};
 Host.prototype.disconnect = function () {
     this.closed = true;
     this.instance.debug("Host disconnected (%s)", this.address);
 };
-Host.prototype.updatePlayers = function () {
+Host.prototype.broadcast = function (payload, excludeHost) {
     var self = this;
 
     var contestants = self.instance.contestants
         .filter(function (c) { return !c.closed; });
 
     var connected = contestants.slice(0);
-    if (!this.closed) connected.push(self);
+    if (!this.closed && !excludeHost) connected.push(self);
+
+    connected.forEach(function (c) {
+        if (c.closed) return;
+        if (payload.send !== undefined)
+            payload.send(c.ws);
+        else
+            send(c.ws, payload);
+    });
+
+    self.instance.contestants = contestants;
+};
+Host.prototype.sendQuestion = function (question, hostOnly) {
+    var self = this;
+    // To host
+    send(this.ws, {
+        "type": "question",
+        "question_id": question.id,
+        "question": question.question,
+        "answer": question.answer,
+        "timeout": question.timeout,
+        "score": question.score
+    });
+
+    // To contestants
+    if (!hostOnly) this.broadcast({
+        "type": "question",
+        "question_id": question.id,
+        "question": question.question,
+        "timeout": question.timeout,
+        "score": question.score
+    }, true);
+
+    setTimeout(function () {
+        if (self.instance.currentQuestion === question)
+            self.sendAnswer(question);
+
+    }, question.time_limit * 1000);
+};
+Host.prototype.sendAnswer = function (question) {
+    var self = this;
+    if (question.answerSent || this.closed) return;
+    question.answerSent = true;
+    // To host
+    send(self.ws, {
+        "type": "answer",
+        "question_id": question.id
+    });
+
+    var messagesToSend = self.instance.contestants.length;
+    self.instance.contestants.forEach(function (contestant) {
+        contestant.sendAnswer(question, function (err) {
+            messagesToSend--;
+            if (err) err.send(contestant.ws);
+            if (messagesToSend === 0)
+                self.updatePlayers();
+        });
+    });
+};
+Host.prototype.sendResponse = function (response) {
+    send(this.ws, {
+        "type": "response",
+        "response_id": response.id,
+        "response_type": response.type,
+        "response_data": response.data,
+        "contestant_id": response.contestant_id
+    });
+};
+Host.prototype.nextQuestion = function (msg, callback) {
+    var self = this;
+    self.instance.nextQuestion(function (err) {
+        if (err) return callback(error("server_error",
+            "An error occurred while advancing to the next question.", msg, err));
+
+        return callback(null);
+    });
+};
+Host.prototype.markResponse = function (msg, callback) {
+    var self = this;
+    if (!msg.response_id)
+        return callback(error("bad_request",
+            "Message must have a 'response_id' field.", msg));
+
+    if (msg.correct == undefined)
+        return callback(error("bad_request",
+            "Message must have a 'correct' field.", msg));
+
+    self.model.markResponse(msg.response_id, msg.correct, function (err, res) {
+        if (err) return callback(error("server_error",
+            "An error occurred while marking a response.", msg, err));
+
+        if (!res) return callback(error("invalid_client",
+            "Response does not exist.", msg));
+
+        return callback(null);
+    });
+};
+Host.prototype.announceWinner = function (winner_id) {
+    this.broadcast({
+        "type": "conclusion",
+        "winner_id": winner_id
+    });
+};
+Host.prototype.closeGame = function (reason) {
+    this.broadcast({
+        "type": "close",
+        "reason": reason
+    });
+
+    this.ws.close();
+    this.closed = true;
+    this.instance.contestants.forEach(function (contestant) {
+        contestant.ws.close();
+        contestant.ws.closed = true;
+    });
+};
+Host.prototype.startGame = function (msg, callback) {
+    var self = this;
+
+    if (self.instance.started)
+        return callback(error("invalid_client",
+            "The quiz has already been started.", msg));
+
+    self.instance.startGame(function (err, title) {
+        if (err) return callback(error("server_error",
+            "An error occurred while starting the game.", msg, err));
+
+        self.broadcast({
+            "type": "start",
+            "title": title
+        });
+        self.instance.nextQuestion(function (err) {
+            if (err) return callback(error("server_error",
+                "An error occurred while moving to the first question.", msg, err));
+
+            callback(null, title);
+        });
+    });
+};
+Host.prototype.endGame = function (msg, callback) {
+    var self = this;
+    self.instance.endGame(function (err) {
+        if (err) return callback(error("server_error",
+            "An error occurred while trying to end the game.", msg, err));
+
+        return callback(null);
+    });
+};
+Host.prototype.updatePlayers = function () {
+    var self = this;
 
     self.instance.contestants.forEach(function (contestant) {
         if (contestant.closed) {
-            connected.forEach(function (c) {
-                if (c.closed) return;
-                send(c.ws, {
-                    "type": "contestant",
-                    "status": "disconnected",
-                    "contestant_id": contestant.id
-                });
+            self.broadcast({
+                "type": "contestant",
+                "status": "disconnected",
+                "contestant_id": contestant.id
             });
         } else {
             contestant.getInfo(function (err, info) {
-                var msg;
                 if (err) {
-                    msg = error("server_error",
+                    self.broadcast(error("server_error",
                         "There was an error while retreiving contestant info.",
-                        null, err);
-
-                    connected.forEach(function (c) {
-                        if (c.closed) return;
-                        msg.send(c.ws);
-                    });
+                        null, err));
                 } else {
-                    msg = {
+                    self.broadcast({
                         "type": "contestant",
                         "status": "connected",
                         "contestant_id": contestant.id,
                         "contestant_name": info.name,
                         "score": info.score
-                    };
-
-                    connected.forEach(function (c) {
-                        if (c.closed) return;
-                        send(c.ws, msg);
                     });
                 }
             });
         }
     });
-
-    self.instance.contestants = contestants;
 };

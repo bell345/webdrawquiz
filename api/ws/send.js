@@ -15,9 +15,13 @@ module.exports = function (ws, payload, msg) {
         payload = JSON.stringify(payload);
     }
 
-    ws.send(payload, function (err) {
-        if (err) debug("WebSocket API error:", err);
+    try {
+        ws.send(payload, function (err) {
+            if (err) debug("WebSocket API error:", err);
 
-        //debug("TX msg: " + payload);
-    });
+            //debug("TX msg: " + payload);
+        });
+    } catch (e) {
+        debug("Message couldn't send: %s", e);
+    }
 };

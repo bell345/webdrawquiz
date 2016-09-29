@@ -39,6 +39,11 @@ GameServer.prototype.join = function () {
 };
 
 GameServer.prototype.getInstance = function (quiz_id) {
+    for (var id in this.instances) if (this.instances.hasOwnProperty(id)) {
+        if (this.instances[id].closed)
+            delete this.instances[id];
+    }
+
     if (this.instances[quiz_id] !== undefined)
         return this.instances[quiz_id];
 

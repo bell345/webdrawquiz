@@ -22,12 +22,33 @@ function wscallback(func) {
     }
 }
 
+function passError(next) {
+    return function (err) {
+        if (err) return next(err);
+    };
+}
+
 module.exports = function (server, prefix, game) {
     var router = ws(express.Router(), server).app;
 
     router.ws(prefix + '/host', hostAuth(game),
     wscallback(function (ws, req, msg, next) {
         switch (msg.type) {
+            case "start":
+                ws.host.startGame(msg, passError(next));
+                break;
+            case "question":
+                ws.host.nextQuestion(msg, passError(next));
+                break;
+            case "evaluate":
+                ws.host.markResponse(msg, passError(next));
+                break;
+            case "answer":
+                ws.host.sendAnswer(ws.host.instance.currentQuestion);
+                break;
+            case "conclusion":
+                ws.host.endGame(msg, passError(next));
+                break;
             default:
                 return next(error("not_found",
                     printf("The requested message type '%s' was unhandled.",
@@ -38,6 +59,9 @@ module.exports = function (server, prefix, game) {
     router.ws(prefix + '/contestant', contestantAuth(game),
     wscallback(function (ws, req, msg, next) {
         switch (msg.type) {
+            case "response":
+                ws.contestant.submitResponse(msg, passError(next));
+                break;
             default:
                 return next(error("not_found",
                     printf("The requested message type '%s' was unhandled.",
