@@ -109,10 +109,17 @@ To server from host:
     
     {}
 
-To client from server:
+To host from server:
 
     {
         "title": string
+    }
+
+To contestant from server:
+
+    {
+        "title": string,
+        "contestant_id": string
     }
 
 ### type: "response"
@@ -133,7 +140,8 @@ To host from server:
         "response_id"; string,
         "response_type": string,
         "response_data": string,
-        "contestant_id": string
+        "contestant_id": string,
+        "correct": boolean
     }
 
 Errors:

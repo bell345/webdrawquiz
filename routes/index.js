@@ -8,9 +8,10 @@ var bind = function (path, view, title) {
 };
 
 bind('/', 'index');
-bind('/admin', 'admin');
-bind('/create', 'create');
-bind('/join', 'join');
-bind('/play', 'play');
+bind("/about/", "about");
+bind('/admin/', 'admin');
+bind('/create/', 'create');
+bind('/join/', 'join');
+bind('/play/', 'play');
 
 module.exports = router;

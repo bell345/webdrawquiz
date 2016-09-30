@@ -26,8 +26,22 @@ Host.prototype.connect = function () {
             "title": this.instance.title
         });
 
-        if (this.instance.currentQuestion !== null) {
-            this.sendQuestion(this.instance.currentQuestion, true);
+        var question = this.instance.currentQuestion;
+        if (question !== null) {
+            this.sendQuestion(question, true);
+
+            var self = this;
+            self.model.getResponses(question.id, function (err, responses) {
+                if (err) return error("server_error",
+                    "An error occurred while retreiving responses.", msg, err)
+                    .send(self.ws);
+
+                if (!responses) return;
+
+                responses.forEach(function (response) {
+                    self.sendResponse(response);
+                });
+            });
         }
     }
 };
@@ -74,12 +88,6 @@ Host.prototype.sendQuestion = function (question, hostOnly) {
         "timeout": question.timeout,
         "score": question.score
     }, true);
-
-    setTimeout(function () {
-        if (self.instance.currentQuestion === question)
-            self.sendAnswer(question);
-
-    }, question.time_limit * 1000);
 };
 Host.prototype.sendAnswer = function (question) {
     var self = this;
@@ -107,7 +115,8 @@ Host.prototype.sendResponse = function (response) {
         "response_id": response.id,
         "response_type": response.type,
         "response_data": response.data,
-        "contestant_id": response.contestant_id
+        "contestant_id": response.contestant_id,
+        "correct": response.correct
     });
 };
 Host.prototype.nextQuestion = function (msg, callback) {
@@ -135,6 +144,9 @@ Host.prototype.markResponse = function (msg, callback) {
 
         if (!res) return callback(error("invalid_client",
             "Response does not exist.", msg));
+
+        self.instance.debug("Response %s was marked %s",
+            msg.response_id, msg.correct ? "correct": "incorrect");
 
         return callback(null);
     });
@@ -169,10 +181,20 @@ Host.prototype.startGame = function (msg, callback) {
         if (err) return callback(error("server_error",
             "An error occurred while starting the game.", msg, err));
 
-        self.broadcast({
+        send(self.ws, {
             "type": "start",
             "title": title
         });
+        self.instance.contestants.forEach(function (contestant) {
+            if (contestant.closed) return;
+
+            send(contestant.ws, {
+                "type": "start",
+                "title": title,
+                "contestant_id": contestant.id
+            });
+        });
+
         self.instance.nextQuestion(function (err) {
             if (err) return callback(error("server_error",
                 "An error occurred while moving to the first question.", msg, err));

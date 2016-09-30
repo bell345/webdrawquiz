@@ -455,6 +455,9 @@ label.small-label {
 .overlay-container > div:not(.show) {
     display:none;
 }
+.overlay-container.hide-error > div.error {
+    display:none;
+}
 .overlay-container.show {
     display:flex;
 }

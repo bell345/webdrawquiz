@@ -91,7 +91,7 @@ model.addContestant = function (quiz_code, sid, name, callback) {
     Quiz.findOne({ code: quiz_code }, function (err, quiz) {
         if (err || !quiz) return callback(err || "invalid_code");
 
-        Contestant.count({ name: name }, function (err, count) {
+        Contestant.count({ quiz_id: quiz._id, name: name }, function (err, count) {
             if (err || count !== 0) return callback(err || "name_taken");
 
             var id = quiz._id;
@@ -108,6 +108,8 @@ model.addContestant = function (quiz_code, sid, name, callback) {
 model.hostAuth = function (host_sid, callback) {
     Quiz.findOne({ host_sid: host_sid }, function (err, quiz) {
         if (err) return callback(err);
+
+        if (!quiz) return callback(null);
 
         return callback(null, quiz._id);
     });
@@ -136,11 +138,27 @@ model.getQuestions = function (quiz_id, callback) {
     Question.find({ quiz_id: quiz_id }, function (err, questions) {
         if (err) return callback(err);
 
+        if (!questions) return callback(null, []);
+
         questions = questions.map(function (q) {
             q.id = q._id;
             return q;
         });
         return callback(null, questions);
+    });
+};
+
+model.getResponses = function (question_id, callback) {
+    Response.find({ question_id: question_id }, function (err, responses) {
+        if (err) return callback(err);
+
+        if (!responses) return callback(null, []);
+
+        responses = responses.map(function (r) {
+            r.id = r._id;
+            return r;
+        });
+        return callback(null, responses);
     });
 };
 
@@ -201,7 +219,7 @@ model.getWinnerID = function (quiz_id, callback) {
         .sort({ score: 'descending' })
         .exec(function (err, contestants) {
             if (err) return callback(err);
-            if (!contestants) return callback(null);
+            if (!contestants || contestants.length == 0) return callback(null);
 
             var contestant = contestants[0];
             return callback(null, contestant._id);
@@ -212,6 +230,6 @@ model.endGame = function (quiz_id, callback) {
     Quiz.update({ _id: quiz_id }, { host_sid: null }, function (err) {
         if (err) return callback(err);
 
-        Contestant.update({ quiz_id: quiz_id }, { sid: null }, callback);
+        Contestant.update({ quiz_id: quiz_id }, { sid: "" }, { multi: true }, callback);
     });
 };

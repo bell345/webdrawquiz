@@ -49,6 +49,10 @@ GameInstance.prototype.nextQuestion = function (callback) {
             (new Date().getTime())
             + (this.currentQuestion.time_limit * 1000);
 
+        this.debug("Next question (%s): %s",
+            this.currentQuestion.id,
+            this.currentQuestion.question);
+
         this.host.sendQuestion(this.currentQuestion);
         callback(null, this.currentQuestion);
     }
@@ -63,9 +67,13 @@ GameInstance.prototype.endGame = function (callback) {
     self.model.getWinnerID(self.id, function (err, contestant_id) {
         if (err) return callback(err);
 
+        self.debug("Game over: The winner is %s.", contestant_id);
         self.host.announceWinner(contestant_id);
         self.host.closeGame("There are no more questions to answer.");
-        self.model.endGame(self.id, callback);
+
+        setTimeout(function () {
+            self.model.endGame(self.id, callback);
+        }, 5000);
     });
 };
 

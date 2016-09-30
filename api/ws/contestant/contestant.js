@@ -27,7 +27,8 @@ Contestant.prototype.connect = function () {
     if (this.instance.started) {
         send(this.ws, {
             "type": "start",
-            "title": this.instance.title
+            "title": this.instance.title,
+            "contestant_id": this.id
         });
 
         if (this.instance.currentQuestion != null) {
@@ -40,6 +41,13 @@ Contestant.prototype.connect = function () {
                 "timeout": question.timeout,
                 "score": question.score
             });
+
+            var self = this;
+            if (question.answerSent) {
+                this.sendAnswer(question, function (err) {
+                    if (err && err.send) err.send(self.ws);
+                }, true);
+            }
         }
     }
 };
@@ -71,7 +79,7 @@ Contestant.prototype.submitResponse = function (msg, callback) {
         return callback(error("invalid_question",
             "The current question is not the one that the response was sent for.", msg));
 
-    if (self.instance.currentQuestion.timeout >= new Date().getTime())
+    if (self.instance.currentQuestion.timeout <= new Date().getTime())
         return callback(error("invalid_question",
             "The current question is no longer accepting entries."));
 
@@ -87,7 +95,7 @@ Contestant.prototype.submitResponse = function (msg, callback) {
         }
     });
 };
-Contestant.prototype.sendAnswer = function (question, callback) {
+Contestant.prototype.sendAnswer = function (question, callback, noSideEffects) {
     if (this.closed) return callback(null);
 
     var self = this;
@@ -96,7 +104,7 @@ Contestant.prototype.sendAnswer = function (question, callback) {
             "An error occurred while checking your answer.", null, err));
 
         var score_delta = question.score;
-        if (!isCorrect) score_delta = 0;
+        if (!isCorrect || noSideEffects) score_delta = 0;
 
         self.model.increaseScore(self.id, score_delta, function (err, score) {
             if (err) return callback(error("server_error",

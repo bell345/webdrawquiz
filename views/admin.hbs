@@ -10,14 +10,29 @@
         font-size:38px;
         font-weight:bold;
     }
+    .players-display {
+        font-size:24px;
+        color:#555;
+    }
     .winner-display {
+        display:block;
         font-size:24px;
         font-weight:bold;
         margin-bottom:16px;
     }
+    tr.template {
+        display:none;
+    }
+    svg .response-path {
+        fill:none;
+        stroke:#333;
+        stroke-width:4px;
+        stroke-linecap:round;
+        stroke-linejoin:round;
+    }
 </style>
 <script>
-    var wm, ws, question_id, contestants = {};
+    var wm, ws, question_id, contestants = {}, gracefulClose = false;
 
     function startQuiz() {
         ws.send("start", {});
@@ -27,15 +42,19 @@
         ws.send("conclusion", {});
     }
 
-    function nextQuestion() {
-        ws.send("question", {});
+    function markResponse(response_id, is_correct) {
+        ws.send("evaluate", {
+            "response_id": response_id,
+            "correct": is_correct
+        });
     }
 
-    function markResponseAsCorrect(response_id) {
-        var payload = {};
-        payload.response_id = response_id;
-        payload.correct = true;
-        ws.send("evaluate", payload);
+    function showAnswer() {
+        ws.send("answer", {});
+    }
+
+    function nextQuestion() {
+        ws.send("question", {});
     }
 
     function updatePlayers() {
@@ -60,8 +79,15 @@
 
         ws = new WSManager("webdrawquiz.host_sid");
         ws.open("../api/v1/ws/host");
+        ws.on('close', function () {
+            if (!gracefulClose)
+                reportError("The connection has been closed prematurely.");
+        });
 
-        $(window).on("beforeunload", function () { ws.close(); });
+        $(window).on("beforeunload", function () {
+            gracefulClose = true;
+            ws.close();
+        });
 
         loader.addTask(function (resolve) {
             if (ws.authenticated) resolve();
@@ -76,6 +102,9 @@
             $(".only-no-quiz").removeClass("show");
             $(".only-started-quiz").addClass("show");
         });
+        ws.on("message-type.close", function (e, msg) {
+            gracefulClose = true;
+        });
 
         ws.on("message-type.question", function (e, msg) {
             if (!msg.question || !msg.question_id || !msg.answer) {
@@ -84,6 +113,7 @@
             question_id = msg.question_id;
             $(".quiz-question-display").text(msg.question);
             $(".quiz-answer-display").text(msg.answer);
+            $(".quiz-responses tbody tr:not(.template)").remove();
 
             var expiry = new Date(msg.timeout).getTime();
             var interval = setInterval(function () {
@@ -95,8 +125,11 @@
                         ":" +
                         zeroPrefix(seconds.toFixed(2), 5));
 
-                if (timeRemaining === 0)
+                if (timeRemaining === 0) {
                     clearInterval(interval);
+                } else if (question_id !== msg.question_id) {
+                    clearInterval(interval);
+                }
             }, 1);
         });
 
@@ -113,6 +146,68 @@
             updatePlayers();
         });
 
+        ws.on("message-type.response", function (e, msg) {
+            if (!msg.response_id || !msg.response_type || !msg.response_data || !msg.contestant_id)
+                return reportError("Got unexpected response from server (type='response')");
+
+            var row = $(".quiz-responses tbody tr.template")[0].cloneNode(true);
+            $(row).removeClass("template");
+            $(".quiz-responses tbody").append(row);
+
+            var contestant = contestants[msg.contestant_id];
+            if (contestant === undefined)
+                return reportError("Contestant ID is invalid (type='response')");
+
+            $(".quiz-responses tbody .contestant-name").filter(function (i, e) {
+                return $(e).text() === contestant.contestant_name;
+            }).parents("tr").remove();
+
+            $(row).find(".contestant-name").text(contestant.contestant_name);
+            $(row).find(".contestant-correct").on('change', function () {
+                markResponse(msg.response_id, this.checked);
+            });
+            switch (msg.response_type) {
+                case "text":
+                    var span = document.createElement("span");
+                    span.className = "response-text-display";
+                    span.innerText = msg.response_data;
+                    $(row).find(".contestant-response-container").append(span);
+                    break;
+
+                case "paths":
+                    var data;
+                    try {
+                        data = JSON.parse(msg.response_data);
+                    } catch (e) {
+                        reportError("Contestant response failed to parse.", e);
+                    }
+
+                    if (!data.width || !data.height || !data.plots)
+                        reportError("Got unexpected response (id='"
+                                + msg.response_id
+                                + "') from contestant (name='"
+                                + contestant.name
+                                + "')");
+
+                    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                    svg.setAttribute("viewBox", [0, 0, data.width, data.height].join(" "));
+                    svg.setAttribute("class", "response-paths-display");
+                    $(row).find(".contestant-response-container").append(svg);
+
+                    var helper = new SVGHelper(svg);
+                    data.plots.forEach(function (plot) {
+                        helper.linePlot(plot, "response-path");
+                    });
+                    break;
+
+                default:
+                    reportError("Got unexpected response type (type='"
+                            + msg.response_type
+                            + "')");
+            }
+
+        });
+
         ws.on("message-type.conclusion", function (e, msg) {
             if (!msg.winner_id)
                 return reportError("Got unexpected response from server (type='conclusion')");
@@ -123,13 +218,14 @@
             if (contestant === undefined)
                 return reportError("Winning contestant is invalid or offline.");
 
-            $(".winner-display").text(contestant.name);
+            $(".winner-display").text(contestant.contestant_name);
         });
 
         loader.start();
+        $(".overlay-container").addClass("hide-error");
 
         $(document).on("pageload", function () {
-            wm = new JSWM($("body")[0]);
+            $(".overlay-container").removeClass("hide-error");
 
             $(".only-no-quiz").addClass("show");
 
@@ -139,12 +235,14 @@
                         readCookie("webdrawquiz.quiz_code")
                 );
             } else {
+                hideOverlay();
                 $(".unauthenticated").addClass("show");
             }
 
 
             $(".start-quiz").click(function () { startQuiz(); });
             $(".end-quiz").click(function () { endQuiz(); });
+            $(".show-answer").click(function () { showAnswer(); });
             $(".next-question").click(function () { nextQuestion(); });
 
         });
@@ -172,19 +270,16 @@
             </div>
         </div>
         <div class="control-row">
-            <p>
-                Quiz code:
-            </p>
+            <h3>Quiz code:</h3>
             <span class="quiz-code-display"></span>
         </div>
         <div class="control-row">
-            <div>
-                Players:
-            </div>
+            <h3>Players:</h3>
             <span class="players-display"></span>
         </div>
         <div class="only-started-quiz">
             <div class="control-row">
+                <button class="show-answer">Show Answer</button>
                 <button class="major next-question">Next Question</button>
                 <button class="end-quiz">End Quiz</button>
             </div>
@@ -207,8 +302,10 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-
+                    <tr class="template">
+                        <td class="contestant-name"></td>
+                        <td class="contestant-response-container"></td>
+                        <td><input type="checkbox" class="contestant-correct" /></td>
                     </tr>
                 </tbody>
             </table>
