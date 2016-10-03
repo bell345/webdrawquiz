@@ -3,7 +3,7 @@
     div.show {
         display:block;
     }
-    .unauthenticated, .admin-panel, .only-started-quiz, .only-concluded-quiz, .only-no-quiz {
+    .only:not(.show) {
         display:none;
     }
     .timeout-display, .quiz-code-display {
@@ -32,7 +32,17 @@
     }
 </style>
 <script>
-    var wm, ws, question_id, contestants = {}, gracefulClose = false;
+    var wm, ws, question_id, timeoutInterval, contestants = {}, gracefulClose = false;
+
+    LEGAL_STATE_TRANSITIONS = {
+        "default": ["unauthenticated", "pre-game"],
+        "unauthenticated": [],
+        "pre-game": ["pre-game", "question", "error"],
+        "question": ["question", "answer", "conclusion", "error"],
+        "answer": ["question", "conclusion", "error"],
+        "conclusion": [],
+        "error": []
+    };
 
     function startQuiz() {
         ws.send("start", {});
@@ -84,23 +94,37 @@
                 reportError("The connection has been closed prematurely.");
         });
 
+        loader.addTask(function (resolve, reject) {
+            if (ws.authenticated === true) { resolve(); }
+            else if (ws.authenticated === false) { reject("unauthenticated"); }
+            else {
+                ws.on("authenticated", function () { resolve(); });
+                ws.on("unauthenticated", function () { reject("unauthenticated"); });
+            }
+        }, 2000, "websocket");
+
+        loader.start();
+
         $(window).on("beforeunload", function () {
             gracefulClose = true;
             ws.close();
         });
 
-        loader.addTask(function (resolve) {
-            if (ws.authenticated) resolve();
-            else ws.on("authenticated", function () { resolve(); });
-        }, 2000, "websocket");
+        ws.on("authenticated", function (e, msg) {
+            changeState("pre-game");
+        });
+
+        ws.on("unauthenticated", function (e, msg) {
+            changeState("unauthenticated");
+        });
 
         ws.on("message-type.start", function (e, msg) {
             if (!msg.title) {
                 return reportError("Got unexpected response from server (type='start')");
             }
+            if (!changeState("pre-game")) return;
+
             $(".quiz-title").text(msg.title);
-            $(".only-no-quiz").removeClass("show");
-            $(".only-started-quiz").addClass("show");
         });
         ws.on("message-type.close", function (e, msg) {
             gracefulClose = true;
@@ -110,6 +134,9 @@
             if (!msg.question || !msg.question_id || !msg.answer) {
                 return reportError("Got unexpected response from server (type='question')");
             }
+
+            if (!changeState("question")) return;
+
             question_id = msg.question_id;
             $(".quiz-question-display").text(msg.question);
             $(".quiz-answer-display").text(msg.answer);
@@ -131,18 +158,18 @@
                     clearInterval(interval);
                 }
             }, 1);
+            clearInterval(timeoutInterval);
+            timeoutInterval = interval;
+        });
+
+        ws.on("message-type.answer", function (e, msg) {
+            changeState("answer");
+            clearInterval(timeoutInterval);
+            $(".timeout-display").text("00:00.00");
         });
 
         ws.on("message-type.contestant", function (e, msg) {
-            if (msg.status == "connected") {
-                contestants[msg.contestant_id] = msg;
-            } else if (msg.status == "disconnected") {
-                if (contestants[msg.contestant_id] !== undefined)
-                    delete contestants[msg.contestant_id];
-            } else {
-                reportError("Got unexpected response from server (type='contestant').");
-            }
-
+            contestants[msg.contestant_id] = msg;
             updatePlayers();
         });
 
@@ -212,8 +239,8 @@
             if (!msg.winner_id)
                 return reportError("Got unexpected response from server (type='conclusion')");
 
-            $(".only-started-quiz").removeClass("show");
-            $(".only-concluded-quiz").addClass("show");
+            if (!changeState("conclusion")) return;
+
             var contestant = contestants[msg.winner_id];
             if (contestant === undefined)
                 return reportError("Winning contestant is invalid or offline.");
@@ -221,30 +248,14 @@
             $(".winner-display").text(contestant.contestant_name);
         });
 
-        loader.start();
-        $(".overlay-container").addClass("hide-error");
-
         $(document).on("pageload", function () {
-            $(".overlay-container").removeClass("hide-error");
-
-            $(".only-no-quiz").addClass("show");
-
-            if (ws.authenticated) {
-                $(".admin-panel").addClass("show");
-                $(".quiz-code-display").text(
-                        readCookie("webdrawquiz.quiz_code")
-                );
-            } else {
-                hideOverlay();
-                $(".unauthenticated").addClass("show");
-            }
-
+            $(".quiz-code-display").text(
+                    readCookie("webdrawquiz.quiz_code"));
 
             $(".start-quiz").click(function () { startQuiz(); });
             $(".end-quiz").click(function () { endQuiz(); });
             $(".show-answer").click(function () { showAnswer(); });
             $(".next-question").click(function () { nextQuestion(); });
-
         });
     });
     });
@@ -255,16 +266,21 @@
         <h2>Administrate Quiz</h2>
         <h3 class="quiz-title"></h3>
     </div>
-    <div class="unauthenticated">
+    <div class="only state-default show">
+        <p>
+            Connecting...
+        </p>
+    </div>
+    <div class="only state-unauthenticated">
         <p>
             Create a quiz here:
         </p>
         <div class="control-row">
-            <a href="create"><button class="major">Create Quiz</button></a>
+            <a href="create/"><button class="major">Create Quiz</button></a>
         </div>
     </div>
-    <div class="admin-panel">
-        <div class="only-no-quiz">
+    <div class="only state-pre-game state-question state-answer">
+        <div class="only state-pre-game">
             <div class="control-row">
                 <button class="major start-quiz">Start Quiz</button>
             </div>
@@ -277,10 +293,10 @@
             <h3>Players:</h3>
             <span class="players-display"></span>
         </div>
-        <div class="only-started-quiz">
+        <div class="only state-question state-answer">
             <div class="control-row">
-                <button class="show-answer">Show Answer</button>
-                <button class="major next-question">Next Question</button>
+                <button class="only state-question major show-answer">Show Answer</button>
+                <button class="only state-answer major next-question">Next Question</button>
                 <button class="end-quiz">End Quiz</button>
             </div>
             <div class="control-row">
@@ -310,16 +326,16 @@
                 </tbody>
             </table>
         </div>
-        <div class="only-concluded-quiz">
-            <p>
-                The quiz is over. The winner is:
-            </p>
-            <span class="winner-display"></span>
-        </div>
+    </div>
+    <div class="only state-conclusion">
+        <p>
+            The quiz is over. The winner is:
+        </p>
+        <span class="winner-display"></span>
     </div>
 </main>
 <div class="overlay-container">
-    <div class="error">
+    <div class="error only state-error">
 
     </div>
 </div>

@@ -461,3 +461,7 @@ label.small-label {
 .overlay-container.show {
     display:flex;
 }
+
+.only:not(.show) {
+    display:none;
+}

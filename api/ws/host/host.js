@@ -17,6 +17,7 @@ function Host(instance, ws, id) {
     this.address = ws.upgradeReq.socket.remoteAddress;
 }
 Host.prototype.connect = function () {
+    var self = this;
     this.instance.hostConnect(this);
     this.instance.debug("Host connected (%s)", this.address);
 
@@ -26,11 +27,18 @@ Host.prototype.connect = function () {
             "title": this.instance.title
         });
 
+        self.updatePlayers(true);
+
         var question = this.instance.currentQuestion;
         if (question !== null) {
             this.sendQuestion(question, true);
+            if (question.answerSent) {
+                send(self.ws, {
+                    "type": "answer",
+                    "question_id": question.id
+                });
+            }
 
-            var self = this;
             self.model.getResponses(question.id, function (err, responses) {
                 if (err) return error("server_error",
                     "An error occurred while retreiving responses.", msg, err)
@@ -212,12 +220,22 @@ Host.prototype.endGame = function (msg, callback) {
         return callback(null);
     });
 };
-Host.prototype.updatePlayers = function () {
+Host.prototype.updatePlayers = function (hostOnly) {
     var self = this;
+    function _send(payload) {
+        if (hostOnly) {
+            if (payload.send !== undefined)
+                payload.send(self.ws);
+            else
+                send(self.ws, payload);
+        } else {
+            self.broadcast(payload);
+        }
+    }
 
     self.instance.contestants.forEach(function (contestant) {
         if (contestant.closed) {
-            self.broadcast({
+            _send({
                 "type": "contestant",
                 "status": "disconnected",
                 "contestant_id": contestant.id
@@ -225,11 +243,11 @@ Host.prototype.updatePlayers = function () {
         } else {
             contestant.getInfo(function (err, info) {
                 if (err) {
-                    self.broadcast(error("server_error",
+                    _send(error("server_error",
                         "There was an error while retreiving contestant info.",
                         null, err));
                 } else {
-                    self.broadcast({
+                    _send({
                         "type": "contestant",
                         "status": "connected",
                         "contestant_id": contestant.id,

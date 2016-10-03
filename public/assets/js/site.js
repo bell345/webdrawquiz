@@ -33,7 +33,30 @@
 //    //        : "")
 //    //);
 //}
+
+var state = "default";
+var LEGAL_STATE_TRANSITIONS = {
+    "default": ["error"]
+};
+
+function changeState(newState) {
+    if (LEGAL_STATE_TRANSITIONS[state] !== undefined
+    && typeof LEGAL_STATE_TRANSITIONS[state] === typeof []
+    && LEGAL_STATE_TRANSITIONS[state].indexOf(newState) !== -1) {
+        $("body").removeClass("state-" + state)
+                .addClass("state-" + newState);
+
+        $(".only").removeClass("show");
+        $(".only.state-" + newState).addClass("show");
+
+        state = newState;
+        return true;
+    } else return false;
+}
+
 function reportError(message, error) {
+    if (!changeState("error")) return;
+
     if (!error) error = null;
     else if (error.responseJSON) error = error.responseJSON;
     else if (error.responseText) try {
@@ -44,6 +67,8 @@ function reportError(message, error) {
     var errtext = error
             ? (error.error_description || error)
             : "";
+
+    console.error(message, errtext);
 
     displayOverlay("error",
             "<h2>An error has occurred</h2>"
@@ -69,7 +94,7 @@ function hideOverlay() {
 
 function WSManager(auth_cookie) {
     this.auth_cookie = auth_cookie || "access_token";
-    this.authenticated = false;
+    this.authenticated = null;
     var self = this;
     $(this).on("authenticated", function (msg) {
         self.authenticated = true;
@@ -77,7 +102,6 @@ function WSManager(auth_cookie) {
 }
 WSManager.prototype = {
     constructor: WSManager,
-    authenticated: false,
     _eventRedirect: function (name) {
         var self = this;
         if (arguments.length > 1) {
@@ -94,8 +118,12 @@ WSManager.prototype = {
         if (location.protocol === "https:")
             protocol = "wss://";
 
-        if (endpoint || !this.uri)
-            this.uri = protocol + location.host + location.pathname + (endpoint || "");
+        if (endpoint || !this.uri) {
+            if (endpoint && endpoint[0] !== "/")
+                this.uri = protocol + location.host + location.pathname + (endpoint || "");
+            else
+                this.uri = protocol + location.host + (endpoint || "");
+        }
 
         this.socket = new WebSocket(this.uri);
 
@@ -111,13 +139,17 @@ WSManager.prototype = {
             //console.log(msg);
             switch (msg.type) {
                 case "error":
-                    reportError("A WebSocket error has occurred: ",
+                    if (msg.id) self.trigger("message-error." + msg.id, msg);
+                    return reportError("A WebSocket error has occurred: ",
                         msg.error_type + ": " + msg.error_description);
                     break;
             }
             if (msg.authenticated && !self.authenticated) {
                 self.trigger("authenticated", msg);
                 self.authenticated = true;
+            } else if (msg.authenticated !== undefined && !msg.authenticated) {
+                self.trigger("unauthenticated", msg);
+                self.authenticated = false;
             }
             if (msg.type) self.trigger("message-type." + msg.type, msg);
             if (msg.id) self.trigger("message-id." + msg.id, msg);
@@ -137,7 +169,7 @@ WSManager.prototype = {
 
         return state("OPEN");
     },
-    send: function (type, payload, callback) {
+    send: function (type, payload, callback, errorCallback) {
         if (!this.ensureOpen()) return;
         if (typeof payload == "string") {
             var obj = {};
@@ -155,8 +187,13 @@ WSManager.prototype = {
 
         if (!callback) return;
         this.on("message-id." + payload.id, function handler(e, msg) {
-            callback(msg.message);
+            callback(msg);
         });
+
+        if (!errorCallback) return;
+        this.on("message-error." + payload.id, function handler(e, msg) {
+            errorCallback(msg);
+        })
     },
     on: function () {
         var sock = $(this.socket);

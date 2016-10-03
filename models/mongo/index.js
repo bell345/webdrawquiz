@@ -198,7 +198,10 @@ model.isCorrect = function (contestant_id, question_id, callback) {
         contestant_id: contestant_id,
         question_id: question_id,
         correct: true
-    }, callback);
+    }, function (err, response) {
+        if (err) return callback(err);
+        return callback(null, response ? true : false);
+    });
 };
 
 model.increaseScore = function (contestant_id, score_delta, callback) {

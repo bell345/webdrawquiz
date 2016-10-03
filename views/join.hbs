@@ -1,9 +1,16 @@
 {{> includes base="../" }}
 <style>
-    input[type='text'].quiz-code {
+    input[type='number'].quiz-code {
         font-size:28px;
         text-align:center;
-        width:120px;
+        width:140px;
+        font-family:monospace;
+        -moz-appearance: textfield;
+    }
+    .quiz-code::-webkit-inner-spin-button,
+    .quiz-code::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        display:none;
     }
 </style>
 <script>
@@ -62,7 +69,7 @@
         </div>
         <div class="control-row">
             <div>Enter code:</div>
-            <input type="text" class="quiz-code" placeholder="xxxx" name="code" />
+            <input type="number" class="quiz-code" placeholder="xxxx" name="code" />
         </div>
         <div class="control-row">
             <button class="major join-quiz">Join Quiz</button>

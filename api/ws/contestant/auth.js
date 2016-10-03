@@ -26,13 +26,14 @@ module.exports = function (game) {
                     if (err) return next(error("server_error",
                         "There was a problem during authentication.", msg, err));
 
+                    send(ws, {
+                        type: "auth",
+                        authenticated: Boolean(contestant_id)
+                    }, msg);
+
                     if (!contestant_id) return next(error("invalid_client",
                         "The token provided was invalid or has expired."));
 
-                    send(ws, {
-                        type: "auth",
-                        authenticated: true
-                    }, msg);
                     ws.authenticated = req.authenticated = "contestant";
                     ws.token = msg.token;
 

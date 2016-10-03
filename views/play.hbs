@@ -87,9 +87,25 @@
         myId = null,
         question_id = null,
         gracefulClose = false,
-        currentTool = "pen",
+        timeoutInterval = null,
         held = false,
         score = 0;
+
+    LEGAL_STATE_TRANSITIONS = {
+        "default": ["unauthenticated", "pre-game"],
+        "unauthenticated": [],
+        "pre-game": ["pre-game", "question", "error"],
+        "question": ["question", "answer", "timeout", "conclusion", "error"],
+        "timeout": ["question", "answer", "error"],
+        "answer": ["question", "conclusion", "error"],
+        "conclusion": [],
+        "error": []
+    };
+
+    function resetTimeout() {
+        clearInterval(timeoutInterval);
+        $(".timeout-display").text("00:00.00");
+    }
 
     function submitPaths(paths) {
         var arr = [];
@@ -173,12 +189,33 @@
              "assets/js/tblib/ui.js",
              "assets/js/jswm2.js"], function () {
 
+        displayOverlay("disconnected");
         ws = new WSManager("webdrawquiz.contestant_sid");
         ws.open("../api/v1/ws/contestant");
         ws.on('close', function () {
             if (!gracefulClose)
                 reportError("The connection has been closed prematurely.");
-            //else displayOverlay("unauthenticated");
+        });
+
+        loader.addTask(function (resolve, reject) {
+            if (ws.authenticated === true) { resolve(); }
+            else if (ws.authenticated === false) { reject("unauthenticated"); }
+            else {
+                ws.on("authenticated", function () { resolve(); });
+                ws.on("unauthenticated", function () { reject("unauthenticated"); });
+            }
+        }, 2000, "websocket");
+
+        loader.start();
+
+        ws.on("authenticated", function () {
+            if (!changeState("pre-game")) return;
+            displayOverlay("not-started");
+        });
+
+        ws.on("unauthenticated", function () {
+            if (!changeState("unauthenticated")) return;
+            displayOverlay("unauthenticated");
         });
 
         $(window).on("beforeunload", function () {
@@ -186,15 +223,12 @@
             ws.close();
         });
 
-        loader.addTask(function (resolve) {
-            if (ws.authenticated) resolve();
-            else ws.on("authenticated", function () { resolve(); });
-        }, 2000, "websocket");
-
         ws.on("message-type.start", function (e, msg) {
             if (!msg.title || !msg.contestant_id) {
                 return reportError("Got unexpected response from server (type='start')");
             }
+            if (!changeState("pre-game")) return;
+
             myId = msg.contestant_id;
             hideOverlay();
         });
@@ -204,12 +238,14 @@
 
             if (msg.status === "connected" && msg.contestant_id === myId) {
                 score = parseFloat(msg.score);
-                $(".score-display").text(score.toString() + " points");
+                $(".score-display").text(score.toString() + " point" + (score == 1 ? "" : "s"));
             }
         });
         ws.on("message-type.question", function (e, msg) {
             if (!msg.question_id || !msg.question || msg.timeout === undefined)
                 return reportError("Got unexpected response from server (type='question')");
+
+            if (!changeState("question")) return;
 
             hideOverlay();
             if (canvas)
@@ -218,8 +254,6 @@
             question_id = msg.question_id;
             $(".question-display").text(msg.question);
             var expiry = new Date(msg.timeout).getTime();
-            if ($(".answer-correct, .answer-incorrect").hasClass("show"))
-                return;
 
             var interval = setInterval(function () {
                 var timeRemaining = Math.max(expiry - new Date().getTime(), 0);
@@ -232,18 +266,25 @@
 
                 if (timeRemaining === 0) {
                     clearInterval(interval);
+
+                    if (!changeState("timeout")) return;
                     displayOverlay("question-timeout");
                 } else if (question_id !== msg.question_id) {
                     clearInterval(interval);
                 }
             }, 1);
+            clearInterval(timeoutInterval);
+            timeoutInterval = interval;
         });
         ws.on("message-type.answer", function (e, msg) {
             if (!msg.question_id || !msg.answer || msg.correct === undefined)
                 return reportError("Got unexpected response from server (type='answer')");
 
+            if (!changeState("answer")) return;
+
             $(".answer-display").text(msg.answer);
-            $(".score-display").text(msg.score.toString() + " points");
+            $(".score-display").text(msg.score.toString() + " point" + (msg.score == 1 ? "" : "s"));
+            resetTimeout();
 
             if (msg.correct) {
                 displayOverlay("answer-correct");
@@ -251,9 +292,12 @@
                 displayOverlay("answer-incorrect");
             }
         });
-        ws.on("message-type.conclude", function (e, msg) {
+        ws.on("message-type.conclusion", function (e, msg) {
             if (!msg.winner_id)
                 return reportError("Got unexpected response from server (type='conclusion')");
+
+            if (!changeState("conclusion")) return;
+            resetTimeout();
 
             if (msg.winner_id == myId) {
                 displayOverlay("end-game-win");
@@ -265,20 +309,7 @@
             gracefulClose = true;
         });
 
-        loader.start();
-        displayOverlay("disconnected");
-        $(".overlay-container").addClass("hide-error");
-
         $(document).on("pageload", function () {
-            $(".overlay-container").removeClass("hide-error");
-
-            if (ws.authenticated) {
-                if (!myId)
-                    displayOverlay("not-started");
-            } else {
-                displayOverlay("unauthenticated");
-            }
-
             canvas = new DrawingCanvas($(".drawing-plane")[0]);
 
             function bindToPlane(query, evt, planeEvt) {
@@ -441,7 +472,7 @@
         </p>
         <h3 class="score-display"></h3>
     </div>
-    <div class="error">
+    <div class="error only state-error">
 
     </div>
 </div>
