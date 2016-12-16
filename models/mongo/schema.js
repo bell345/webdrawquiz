@@ -31,6 +31,7 @@ module.exports = {
         contestant_id: ObjectId,
         type: { type: String },
         data: String,
-        correct: { type: Boolean, default: false }
+        correct: { type: Boolean, default: false },
+        bonus: Number
     }))
 };

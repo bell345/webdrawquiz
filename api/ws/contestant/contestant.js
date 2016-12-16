@@ -99,12 +99,13 @@ Contestant.prototype.sendAnswer = function (question, callback, noSideEffects) {
     if (this.closed) return callback(null);
 
     var self = this;
-    self.model.isCorrect(self.id, question.id, function (err, isCorrect) {
+    self.model.isCorrect(self.id, question.id, function (err, isCorrect, bonusPoints) {
         if (err) return callback(error("server_error",
             "An error occurred while checking your answer.", null, err));
 
         var score_delta = question.score;
         if (!isCorrect || noSideEffects) score_delta = 0;
+        if (!noSideEffects) score_delta += bonusPoints; // bonus for correct and incorrect
 
         self.model.increaseScore(self.id, score_delta, function (err, score) {
             if (err) return callback(error("server_error",

@@ -146,7 +146,16 @@ Host.prototype.markResponse = function (msg, callback) {
         return callback(error("bad_request",
             "Message must have a 'correct' field.", msg));
 
-    self.model.markResponse(msg.response_id, msg.correct, function (err, res) {
+    var bonus = 0;
+    if (msg.bonus !== undefined) {
+        if ((msg.bonus < 0) || (parseInt(msg.bonus) !== msg.bonus))
+            return callback(error("bad_request",
+                "Optional 'bonus' field must be a positive integer.", msg));
+
+        bonus = msg.bonus;
+    }
+
+    self.model.markResponse(msg.response_id, msg.correct, bonus, function (err, res) {
         if (err) return callback(error("server_error",
             "An error occurred while marking a response.", msg, err));
 

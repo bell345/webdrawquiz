@@ -189,8 +189,8 @@ model.submitResponse = function (question_id, contestant_id, type, data, callbac
     });
 };
 
-model.markResponse = function (response_id, is_correct, callback) {
-    Response.update({ _id: response_id }, { correct: is_correct }, callback);
+model.markResponse = function (response_id, is_correct, bonus_points, callback) {
+    Response.update({ _id: response_id }, { correct: is_correct, bonus: bonus_points }, callback);
 };
 
 model.isCorrect = function (contestant_id, question_id, callback) {
@@ -200,7 +200,7 @@ model.isCorrect = function (contestant_id, question_id, callback) {
         correct: true
     }, function (err, response) {
         if (err) return callback(err);
-        return callback(null, response ? true : false);
+        return callback(null, !!response, response ? response.bonus : 0);
     });
 };
 

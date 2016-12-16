@@ -154,13 +154,15 @@ Errors:
 ### type: "evaluate"
 
 This message is sent to the server by the host to affirm whether or not the latest response
-by a contestant is correct. The contestant is not notified until the round is over.
+by a contestant is correct. The host can optionally choose to award an arbitrary positive integer amount
+of bonus points for particularly good answers. The contestant is not notified until the round is over.
 
 To server from host:
 
     {
         "response_id": string,
-        "correct": boolean
+        "correct": boolean,
+        "bonus": integer
     }
 
 ### type: "question"
