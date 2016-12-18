@@ -1,5 +1,8 @@
 var express = require('express');
+var slashes = require("connect-slashes");
 var router = express.Router();
+
+router.use(slashes(true, { base: "/webdrawquiz" }));
 
 var bind = function (path, view, title) {
     router.get(path, function (req, res, next) {
