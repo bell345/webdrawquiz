@@ -124,7 +124,8 @@ Host.prototype.sendResponse = function (response) {
         "response_type": response.type,
         "response_data": response.data,
         "contestant_id": response.contestant_id,
-        "correct": response.correct
+        "correct": response.correct,
+        "bonus": response.bonus
     });
 };
 Host.prototype.nextQuestion = function (msg, callback) {
@@ -148,11 +149,11 @@ Host.prototype.markResponse = function (msg, callback) {
 
     var bonus = 0;
     if (msg.bonus !== undefined) {
-        if ((msg.bonus < 0) || (parseInt(msg.bonus) !== msg.bonus))
+        if ((msg.bonus < 0) || (parseInt(msg.bonus) != msg.bonus))
             return callback(error("bad_request",
                 "Optional 'bonus' field must be a positive integer.", msg));
 
-        bonus = msg.bonus;
+        bonus = parseInt(msg.bonus);
     }
 
     self.model.markResponse(msg.response_id, msg.correct, bonus, function (err, res) {

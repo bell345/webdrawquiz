@@ -41,7 +41,7 @@
         "question": ["question", "answer", "conclusion", "error", "default"],
         "answer": ["question", "conclusion", "error", "default"],
         "conclusion": [],
-        "error": []
+        "error": ["default"]
     };
 
     function startQuiz() {
@@ -52,10 +52,11 @@
         ws.send("conclusion", {});
     }
 
-    function markResponse(response_id, is_correct) {
+    function markResponse(response_id, is_correct, bonus) {
         ws.send("evaluate", {
             "response_id": response_id,
-            "correct": is_correct
+            "correct": is_correct,
+            "bonus": bonus
         });
     }
 
@@ -82,17 +83,27 @@
         return (new Array(n - s.length + 1)).join(c) + s;
     }
 
+    function continueHandler() {
+        if (!changeState("default")) return;
+        ws.reopen();
+    }
+
     $(function () {
     Require(["assets/js/tblib/loader.js",
              "assets/js/tblib/ui.js",
              "assets/js/jswm2.js"], function () {
+
+        if (!readCookie("webdrawquiz.host_sid")) {
+            changeState("unauthenticated");
+            return;
+        }
 
         ws = new WSManager("webdrawquiz.host_sid");
         ws.on('close', function () {
             if (!gracefulClose) {
                 if (!changeState("default")) return;
                 ws.reopen(null, function () {
-                    reportError("The connection has been closed prematurely.");
+                    reportError("The connection has been closed prematurely.", null, continueHandler);
                 });
             }
         });
@@ -121,7 +132,7 @@
 
         ws.on("message-type.start", function (e, msg) {
             if (!msg.title) {
-                return reportError("Got unexpected response from server (type='start')");
+                return reportError("Got unexpected response from server (type='start')", null, continueHandler);
             }
             if (!changeState("pre-game")) return;
 
@@ -133,7 +144,7 @@
 
         ws.on("message-type.question", function (e, msg) {
             if (!msg.question || !msg.question_id || !msg.answer) {
-                return reportError("Got unexpected response from server (type='question')");
+                return reportError("Got unexpected response from server (type='question')", null, continueHandler);
             }
 
             if (!changeState("question")) return;
@@ -176,7 +187,7 @@
 
         ws.on("message-type.response", function (e, msg) {
             if (!msg.response_id || !msg.response_type || !msg.response_data || !msg.contestant_id)
-                return reportError("Got unexpected response from server (type='response')");
+                return reportError("Got unexpected response from server (type='response')", null, continueHandler);
 
             var row = $(".quiz-responses tbody tr.template")[0].cloneNode(true);
             $(row).removeClass("template");
@@ -191,9 +202,24 @@
             }).parents("tr").remove();
 
             $(row).find(".contestant-name").text(contestant.contestant_name);
-            $(row).find(".contestant-correct").on('change', function () {
-                markResponse(msg.response_id, this.checked);
-            });
+
+            function updateResponse() {
+                var row = $(this).parents("tr");
+                markResponse(msg.response_id,
+                        row.find(".contestant-correct")[0].checked,
+                        row.find(".contestant-bonus").val());
+            }
+
+            if (msg.correct)
+                $(row).find(".contestant-correct").click();
+
+            $(row).find(".contestant-correct").on('change', updateResponse);
+
+            if (msg.bonus)
+                $(row).find(".contestant-bonus").val(msg.bonus);
+
+            $(row).find(".contestant-bonus").on("change", updateResponse);
+
             switch (msg.response_type) {
                 case "text":
                     var span = document.createElement("span");
@@ -207,7 +233,7 @@
                     try {
                         data = JSON.parse(msg.response_data);
                     } catch (e) {
-                        reportError("Contestant response failed to parse.", e);
+                        reportError("Contestant response failed to parse.", e, continueHandler);
                     }
 
                     if (!data.width || !data.height || !data.plots)
@@ -215,7 +241,7 @@
                                 + msg.response_id
                                 + "') from contestant (name='"
                                 + contestant.name
-                                + "')");
+                                + "')", null, continueHandler);
 
                     var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                     svg.setAttribute("viewBox", [0, 0, data.width, data.height].join(" "));
@@ -231,20 +257,20 @@
                 default:
                     reportError("Got unexpected response type (type='"
                             + msg.response_type
-                            + "')");
+                            + "')", null, continueHandler);
             }
 
         });
 
         ws.on("message-type.conclusion", function (e, msg) {
             if (!msg.winner_id)
-                return reportError("Got unexpected response from server (type='conclusion')");
+                return reportError("Got unexpected response from server (type='conclusion')", null, continueHandler);
 
             if (!changeState("conclusion")) return;
 
             var contestant = contestants[msg.winner_id];
             if (contestant === undefined)
-                return reportError("Winning contestant is invalid or offline.");
+                return reportError("Winning contestant is invalid or offline.", null, continueHandler);
 
             $(".winner-display").text(contestant.contestant_name);
         });
@@ -319,13 +345,15 @@
                         <th>Contestant</th>
                         <th>Response</th>
                         <th><i class="material-icons">check</i></th>
+                        <th>Bonus</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="template">
+                    <tr class="template response">
                         <td class="contestant-name"></td>
                         <td class="contestant-response-container"></td>
                         <td><input type="checkbox" class="contestant-correct" /></td>
+                        <td><input type="number" class="contestant-bonus" min="0" max="999" step="1" value="0" /></td>
                     </tr>
                 </tbody>
             </table>

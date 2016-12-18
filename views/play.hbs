@@ -89,6 +89,7 @@
         gracefulClose = false,
         timeoutInterval = null,
         held = false,
+        previousScore = 0,
         score = 0;
 
     LEGAL_STATE_TRANSITIONS = {
@@ -99,12 +100,17 @@
         "timeout": ["question", "answer", "error", "default"],
         "answer": ["question", "conclusion", "error", "default"],
         "conclusion": [],
-        "error": []
+        "error": ["default"]
     };
 
     function resetTimeout() {
         clearInterval(timeoutInterval);
         $(".timeout-display").text("00:00.00");
+    }
+
+    function continueHandler() {
+        if (!changeState("default")) return;
+        ws.reopen();
     }
 
     function submitPaths(paths) {
@@ -189,6 +195,12 @@
              "assets/js/tblib/ui.js",
              "assets/js/jswm2.js"], function () {
 
+        if (!readCookie("webdrawquiz.contestant_sid")) {
+            changeState("unauthenticated");
+            displayOverlay("unauthenticated");
+            return;
+        }
+
         displayOverlay("disconnected");
         ws = new WSManager("webdrawquiz.contestant_sid");
         ws.on('close', function () {
@@ -196,7 +208,7 @@
                 if (!changeState("default")) return;
                 displayOverlay("disconnected");
                 ws.reopen(null, function () {
-                    reportError("The connection has been closed prematurely.");
+                    reportError("The connection has been closed prematurely.", null, continueHandler);
                 });
             }
         });
@@ -227,7 +239,7 @@
 
         ws.on("message-type.start", function (e, msg) {
             if (!msg.title || !msg.contestant_id) {
-                return reportError("Got unexpected response from server (type='start')");
+                return reportError("Got unexpected response from server (type='start')", null, continueHandler);
             }
             if (!changeState("pre-game")) return;
 
@@ -236,16 +248,11 @@
         });
         ws.on("message-type.contestant", function (e, msg) {
             if (!msg.contestant_id || !msg.status)
-                return reportError("Got unexpected response from server (type='contestant')");
-
-            if (msg.status === "connected" && msg.contestant_id === myId) {
-                score = parseFloat(msg.score);
-                $(".score-display").text(score.toString() + " point" + (score == 1 ? "" : "s"));
-            }
+                return reportError("Got unexpected response from server (type='contestant')", null, continueHandler);
         });
         ws.on("message-type.question", function (e, msg) {
             if (!msg.question_id || !msg.question || msg.timeout === undefined)
-                return reportError("Got unexpected response from server (type='question')");
+                return reportError("Got unexpected response from server (type='question')", null, continueHandler);
 
             if (!changeState("question")) return;
 
@@ -280,12 +287,21 @@
         });
         ws.on("message-type.answer", function (e, msg) {
             if (!msg.question_id || !msg.answer || msg.correct === undefined)
-                return reportError("Got unexpected response from server (type='answer')");
+                return reportError("Got unexpected response from server (type='answer')", null, continueHandler);
 
             if (!changeState("answer")) return;
 
             $(".answer-display").text(msg.answer);
-            $(".score-display").text(msg.score.toString() + " point" + (msg.score == 1 ? "" : "s"));
+
+            var score_delta = msg.score - score;
+            score = msg.score;
+            if (score_delta > 0)
+                $(".only.score-gained").addClass("show");
+            else
+                $(".only.score-gained").removeClass("show");
+
+            $(".score-delta-display").text(score_delta.toString() + " point" + (score_delta == 1 ? "" : "s"));
+            $(".score-display").text(score.toString() + " point" + (score == 1 ? "" : "s"));
             resetTimeout();
 
             if (msg.correct) {
@@ -296,7 +312,7 @@
         });
         ws.on("message-type.conclusion", function (e, msg) {
             if (!msg.winner_id)
-                return reportError("Got unexpected response from server (type='conclusion')");
+                return reportError("Got unexpected response from server (type='conclusion')", null, continueHandler);
 
             if (!changeState("conclusion")) return;
             resetTimeout();
@@ -448,6 +464,12 @@
             </p>
             <h4 class="answer-display"></h4>
         </div>
+        <div class="only score-gained control-row">
+            <p>
+                You gained:
+            </p>
+            <h4 class="score-delta-display"></h4>
+        </div>
         <p>
             You now have:
         </p>
@@ -459,6 +481,12 @@
                 You were incorrect. The correct answer was:
             </p>
             <h4 class="answer-display"></h4>
+        </div>
+        <div class="only score-gained control-row">
+            <p>
+                You gained:
+            </p>
+            <h4 class="score-delta-display"></h4>
         </div>
         <p>
             You now have:

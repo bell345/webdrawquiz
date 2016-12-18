@@ -32,6 +32,6 @@ module.exports = {
         type: { type: String },
         data: String,
         correct: { type: Boolean, default: false },
-        bonus: Number
+        bonus: { type: Number, default: 0 }
     }))
 };

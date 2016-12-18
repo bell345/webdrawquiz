@@ -9,7 +9,9 @@
                 $(this).parents("tr").remove();
             });
         }
-        $(".add-question").click(function () {
+        $(".add-question").click(function (e) {
+            if (e.preventDefault) e.preventDefault();
+
             var tbody = $(".quiz-questions tbody")[0];
             var row = $(".quiz-questions tbody tr:last-child")[0];
             row = row.cloneNode(true);
@@ -19,7 +21,8 @@
 
         bindRow($(".quiz-questions tbody tr"));
 
-        $(".submit-quiz").click(function () {
+        $(".quiz-creation").on("submit", function (e) {
+            if (e.preventDefault) e.preventDefault();
 
             $(".error-message").removeClass("show");
 
@@ -37,7 +40,7 @@
                             "question": $(e).find(".quiz-question").val(),
                             "answer": $(e).find(".quiz-answer").val(),
                             "time_limit": time_limit,
-                            "score": 1
+                            "score": $(e).find(".quiz-score").val()
                         };
                     }).toArray()
                 },
@@ -66,6 +69,8 @@
                     }
                 }
             });
+
+            return false;
         });
     });
 </script>
@@ -74,7 +79,7 @@
     <div class="hero-container">
         <h2>Create Quiz</h2>
     </div>
-    <div class="quiz-creation">
+    <form action="create/" method="post" class="quiz-creation">
         <div class="control-row">
             <span class="error-message"></span>
         </div>
@@ -82,8 +87,8 @@
             <input type="text" class="quiz-title" placeholder="Title" name="title" />
         </div>
         <div class="control-row">
-            <button class="add-question">Add Question</button>
-            <button class="major submit-quiz">Create Quiz</button>
+            <input type="button" class="add-question" value="Add Question" />
+            <input type="submit" class="major submit-quiz" value="Submit Quiz" />
         </div>
         <div class="control-row">
             <div>
@@ -96,6 +101,7 @@
                 <tr>
                     <th>Question</th>
                     <th>Answer</th>
+                    <th>Score</th>
                     <th></th>
                 </tr>
             </thead>
@@ -103,9 +109,10 @@
                 <tr>
                     <td><textarea class="quiz-question" placeholder="Question"></textarea></td>
                     <td><textarea class="quiz-answer" placeholder="Answer"></textarea></td>
+                    <td><input type="number" class="quiz-score" min="0" value="10" /></td>
                     <td><button class="red-button remove-question"><i class="material-icons">close</i></button></td>
                 </tr>
             </tbody>
         </table>
-    </div>
+    </form>
 </main>

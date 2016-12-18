@@ -196,11 +196,12 @@ model.markResponse = function (response_id, is_correct, bonus_points, callback) 
 model.isCorrect = function (contestant_id, question_id, callback) {
     Response.findOne({
         contestant_id: contestant_id,
-        question_id: question_id,
-        correct: true
+        question_id: question_id
     }, function (err, response) {
         if (err) return callback(err);
-        return callback(null, !!response, response ? response.bonus : 0);
+        return callback(null,
+            response ? response.correct : false,
+            response ? response.bonus : 0);
     });
 };
 

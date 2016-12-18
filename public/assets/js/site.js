@@ -36,7 +36,8 @@
 
 var state = "default";
 var LEGAL_STATE_TRANSITIONS = {
-    "default": ["error"]
+    "default": ["error"],
+    "error": ["default"]
 };
 
 function changeState(newState) {
@@ -54,7 +55,7 @@ function changeState(newState) {
     } else return false;
 }
 
-function reportError(message, error) {
+function reportError(message, error, continueHandler) {
     if (!changeState("error")) return;
 
     if (!error) error = null;
@@ -70,11 +71,16 @@ function reportError(message, error) {
 
     console.error(message, errtext);
 
+    window._continueHandler = function () {
+        hideOverlay();
+        if (!continueHandler) return;
+        continueHandler();
+    };
     displayOverlay("error",
             "<h2>An error has occurred</h2>"
             + "<h4>" + message + "</h4>"
             + "<p>" + errtext + "</p>"
-            + "<button onclick='hideOverlay();'>OK</button>"
+            + "<button onclick='_continueHandler();'>OK</button>"
             + "<button onclick='location.reload();'>Reload</button>"
     );
 }

@@ -141,7 +141,8 @@ To host from server:
         "response_type": string,
         "response_data": string,
         "contestant_id": string,
-        "correct": boolean
+        "correct": boolean,
+        "bonus": integer
     }
 
 Errors:
