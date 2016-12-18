@@ -37,9 +37,9 @@
     LEGAL_STATE_TRANSITIONS = {
         "default": ["unauthenticated", "pre-game"],
         "unauthenticated": [],
-        "pre-game": ["pre-game", "question", "error"],
-        "question": ["question", "answer", "conclusion", "error"],
-        "answer": ["question", "conclusion", "error"],
+        "pre-game": ["pre-game", "question", "error", "default"],
+        "question": ["question", "answer", "conclusion", "error", "default"],
+        "answer": ["question", "conclusion", "error", "default"],
         "conclusion": [],
         "error": []
     };
@@ -88,10 +88,13 @@
              "assets/js/jswm2.js"], function () {
 
         ws = new WSManager("webdrawquiz.host_sid");
-        ws.open("../api/v1/ws/host");
         ws.on('close', function () {
-            if (!gracefulClose)
-                reportError("The connection has been closed prematurely.");
+            if (!gracefulClose) {
+                if (!changeState("default")) return;
+                ws.reopen(null, function () {
+                    reportError("The connection has been closed prematurely.");
+                });
+            }
         });
 
         loader.addTask(function (resolve, reject) {
@@ -101,9 +104,7 @@
                 ws.on("authenticated", function () { resolve(); });
                 ws.on("unauthenticated", function () { reject("unauthenticated"); });
             }
-        }, 2000, "websocket");
-
-        loader.start();
+        }, 10000, "websocket");
 
         $(window).on("beforeunload", function () {
             gracefulClose = true;
@@ -247,6 +248,9 @@
 
             $(".winner-display").text(contestant.contestant_name);
         });
+
+        ws.open("../api/v1/ws/host");
+        loader.start();
 
         $(document).on("pageload", function () {
             $(".quiz-code-display").text(

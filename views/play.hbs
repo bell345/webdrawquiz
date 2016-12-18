@@ -94,10 +94,10 @@
     LEGAL_STATE_TRANSITIONS = {
         "default": ["unauthenticated", "pre-game"],
         "unauthenticated": [],
-        "pre-game": ["pre-game", "question", "error"],
-        "question": ["question", "answer", "timeout", "conclusion", "error"],
-        "timeout": ["question", "answer", "error"],
-        "answer": ["question", "conclusion", "error"],
+        "pre-game": ["pre-game", "question", "error", "default"],
+        "question": ["question", "answer", "timeout", "conclusion", "error", "default"],
+        "timeout": ["question", "answer", "error", "default"],
+        "answer": ["question", "conclusion", "error", "default"],
         "conclusion": [],
         "error": []
     };
@@ -191,10 +191,14 @@
 
         displayOverlay("disconnected");
         ws = new WSManager("webdrawquiz.contestant_sid");
-        ws.open("../api/v1/ws/contestant");
         ws.on('close', function () {
-            if (!gracefulClose)
-                reportError("The connection has been closed prematurely.");
+            if (!gracefulClose) {
+                if (!changeState("default")) return;
+                displayOverlay("disconnected");
+                ws.reopen(null, function () {
+                    reportError("The connection has been closed prematurely.");
+                });
+            }
         });
 
         loader.addTask(function (resolve, reject) {
@@ -204,9 +208,7 @@
                 ws.on("authenticated", function () { resolve(); });
                 ws.on("unauthenticated", function () { reject("unauthenticated"); });
             }
-        }, 2000, "websocket");
-
-        loader.start();
+        }, 10000, "websocket");
 
         ws.on("authenticated", function () {
             if (!changeState("pre-game")) return;
@@ -308,6 +310,9 @@
         ws.on("message-type.close", function (e, msg) {
             gracefulClose = true;
         });
+
+        ws.open("../api/v1/ws/contestant");
+        loader.start();
 
         $(document).on("pageload", function () {
             canvas = new DrawingCanvas($(".drawing-plane")[0]);

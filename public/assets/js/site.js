@@ -95,8 +95,9 @@ function hideOverlay() {
 function WSManager(auth_cookie) {
     this.auth_cookie = auth_cookie || "access_token";
     this.authenticated = null;
+    this._reconnectTries = 0;
     var self = this;
-    $(this).on("authenticated", function (msg) {
+    $(this).on("authenticated", function () {
         self.authenticated = true;
     });
 }
@@ -107,10 +108,11 @@ WSManager.prototype = {
         if (arguments.length > 1) {
             var args = [].splice.call(arguments, 0);
             args.forEach(function (e) { self._eventRedirect(e); });
+            return;
         }
 
-        $(this.socket).on(name, function () {
-            $(self).trigger.apply($(self), [name].concat(arguments));
+        $(this.socket).on(name, function (event) {
+            self.trigger(name, event.originalEvent);
         });
     },
     open: function (endpoint) {
@@ -126,6 +128,9 @@ WSManager.prototype = {
         }
 
         this.socket = new WebSocket(this.uri);
+        this._eventRedirect("open", "close", "message", "error");
+
+        if (this._reconnectTries > 0) return;
 
         var self = this;
         this.on("open", function () {
@@ -133,8 +138,8 @@ WSManager.prototype = {
                 token: readCookie(self.auth_cookie)
             });
         });
-        this.on("message", function (event) {
-            var msg = JSON.parse(event.originalEvent.data);
+        this.on("message", function (e, event) {
+            var msg = JSON.parse(event.data);
             //console.log("Server payload");
             //console.log(msg);
             switch (msg.type) {
@@ -142,7 +147,6 @@ WSManager.prototype = {
                     if (msg.id) self.trigger("message-error." + msg.id, msg);
                     return reportError("A WebSocket error has occurred: ",
                         msg.error_type + ": " + msg.error_description);
-                    break;
             }
             if (msg.authenticated && !self.authenticated) {
                 self.trigger("authenticated", msg);
@@ -157,6 +161,30 @@ WSManager.prototype = {
     },
     close: function () {
         this.socket.close();
+    },
+    reopen: function (callback, errorCallback) {
+        this._reconnectTries++;
+
+        var self = this;
+        function unbind() {
+            self.off("open", handler);
+            self.off("error", errorHandler);
+        }
+        function handler(e, event) {
+            unbind();
+            if (!callback) return;
+            callback(event);
+        }
+        function errorHandler(e, event) {
+            unbind();
+            if (!errorCallback) return;
+            errorCallback(event);
+        }
+        this.on("open", handler);
+        this.on("error", errorHandler);
+
+        this.authenticated = null;
+        this.open();
     },
     ensureOpen: function (endpoint) {
         var self = this;
@@ -196,15 +224,18 @@ WSManager.prototype = {
         })
     },
     on: function () {
-        var sock = $(this.socket);
+        var sock = $(this);
         sock.on.apply(sock, arguments);
+        return this;
     },
     off: function () {
-        var sock = $(this.socket);
+        var sock = $(this);
         sock.off.apply(sock, arguments);
+        return this;
     },
     trigger: function () {
-        var sock = $(this.socket);
-        sock.trigger.apply(sock, arguments);
+        var sock = $(this);
+        sock.triggerHandler.apply(sock, arguments);
+        return this;
     }
 };
