@@ -1,0 +1,30 @@
+div.show {
+    display:block;
+}
+.only:not(.show) {
+    display:none;
+}
+.timeout-display, .quiz-code-display {
+    font-size:38px;
+    font-weight:bold;
+}
+.players-display {
+    font-size:24px;
+    color:#555;
+}
+.winner-display {
+    display:block;
+    font-size:24px;
+    font-weight:bold;
+    margin-bottom:16px;
+}
+tr.template {
+    display:none;
+}
+svg .response-path {
+    fill:none;
+    stroke:#333;
+    stroke-width:4px;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}

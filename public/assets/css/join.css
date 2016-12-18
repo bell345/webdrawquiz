@@ -1,0 +1,12 @@
+input[type='number'].quiz-code {
+    font-size:28px;
+    text-align:center;
+    width:140px;
+    font-family:monospace;
+    -moz-appearance: textfield;
+}
+.quiz-code::-webkit-inner-spin-button,
+.quiz-code::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    display:none;
+}
