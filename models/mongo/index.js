@@ -91,16 +91,20 @@ model.addContestant = function (quiz_code, sid, name, callback) {
     Quiz.findOne({ code: quiz_code }, function (err, quiz) {
         if (err || !quiz) return callback(err || "invalid_code");
 
-        Contestant.count({ quiz_id: quiz._id, name: name }, function (err, count) {
-            if (err || count !== 0) return callback(err || "name_taken");
+        Contestant.findOne({ quiz_id: quiz._id, name: name }, function (err, contestant) {
+            if (err) return callback(err);
 
             var id = quiz._id;
-            var contestant = new Contestant({
-                quiz_id: id,
-                sid: sid,
-                name: name
-            });
-            contestant.save(callback);
+            if (!contestant) {
+                contestant = new Contestant({
+                    quiz_id: id,
+                    sid: sid,
+                    name: name
+                });
+                return contestant.save(callback);
+            } else {
+                return callback(null, contestant);
+            }
         });
     });
 };

@@ -55,9 +55,6 @@ function join(done) {
             if (err === "invalid_code") return done(error("invalid_client",
                 "Quiz code does not exist."));
 
-            if (err === "name_taken") return done(error("invalid_client",
-                "The name has already been taken."));
-
             if (err || !contestant) return done(error("server_error",
                 "There was a problem while joining the game.", err));
 
