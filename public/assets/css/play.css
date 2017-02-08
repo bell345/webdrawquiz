@@ -13,6 +13,23 @@ svg .path {
     stroke-linecap:round;
     stroke-linejoin:round;
 }
+.text-container {
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:72px;
+    padding:15% 20%;
+    text-align:center;
+    background:#eee;
+}
+input[type="text"].text-response {
+    font-size:24px;
+    width:100%;
+}
+.text-container .question-display {
+    font-size:24px;
+}
 .toolbox-container {
     position:fixed;
     left:0;

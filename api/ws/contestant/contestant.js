@@ -91,6 +91,10 @@ Contestant.prototype.submitResponse = function (msg, callback) {
             self.instance.host.sendResponse(response);
 
             self.instance.debug("Contestant %s submitted response %s", self.id, response.id);
+            send(self.ws, {
+                "question_id": msg.question_id,
+                "response_id": response.id
+            }, msg);
             callback(null);
         }
     });

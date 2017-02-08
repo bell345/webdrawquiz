@@ -47,7 +47,7 @@ function changeState(newState) {
         $("body").removeClass("state-" + state)
                 .addClass("state-" + newState);
 
-        $(".only").removeClass("show");
+        $(".only.state-" + state).removeClass("show");
         $(".only.state-" + newState).addClass("show");
 
         state = newState;

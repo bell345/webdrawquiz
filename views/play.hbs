@@ -3,15 +3,27 @@
 <script src="assets/js/play.js"></script>
 </head>
 <body>
-<div class="drawing-container">
+<div class="drawing-container only mode-draw">
     <svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="drawing-plane"></svg>
+</div>
+<div class="text-container only mode-text">
+    <div class="control-row">
+        <q class="question-display"></q>
+    </div>
+    <div class="control-row">
+        <input type="text" class="text-response" placeholder="Type here" />
+    </div>
 </div>
 <div class="question-popup">
     <q class="question-display"></q>
 </div>
 <div class="toolbox-container">
     <ul class="toolbox">
-        <li class="toolbox-eraser">
+        <li class="toolbox-change-mode">
+            <i class="material-icons only mode-draw">keyboard</i>
+            <i class="material-icons only mode-text">gesture</i>
+        </li>
+        <li class="toolbox-eraser only mode-draw">
             <i class="material-icons">delete</i>
         </li>
         <li class="toolbox-submit">

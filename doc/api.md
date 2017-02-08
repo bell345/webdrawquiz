@@ -145,6 +145,13 @@ To host from server:
         "bonus": integer
     }
 
+To contestant from server:
+
+    {
+        "question_id": string,
+        "response_id": string
+    }
+
 Errors:
  * "invalid_question"
     * This can be the result of the question timing out, after which no more responses can be sent.

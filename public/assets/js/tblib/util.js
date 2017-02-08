@@ -1541,12 +1541,12 @@ WideCanvas.prototype = {
 
         if (this.expandElement != null) {
             var dims = [
-                parseInt(this.expandElement.getStyle("width")),
-                parseInt(this.expandElement.getStyle("height"))
+                parseInt(getComputedStyle(this.expandElement).width),
+                parseInt(getComputedStyle(this.expandElement).height)
             ];
-            if (dims[0] != this.helper.width)
+            if (dims[0] != this.helper.width && dims[0] > 0)
                 this.helper.width = dims[0];
-            if (dims[1] != this.helper.height)
+            if (dims[1] != this.helper.height && dims[1] > 0)
                 this.helper.height = dims[1];
         }
         this.lastFrame = currTime;

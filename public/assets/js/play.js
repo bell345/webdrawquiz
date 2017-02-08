@@ -4,6 +4,7 @@ var ws, canvas,
     gracefulClose = false,
     timeoutInterval = null,
     held = false,
+    mode = "draw",
     previousScore = 0,
     score = 0;
 
@@ -28,7 +29,13 @@ function continueHandler() {
     ws.reopen();
 }
 
-function submitPaths(paths) {
+function changeMode(newMode) {
+    $(".only.mode-" + mode).removeClass("show");
+    $(".only.mode-" + newMode).addClass("show");
+    mode = newMode;
+}
+
+function submitPaths(paths, callback) {
     var arr = [];
     for (var id in paths) if (paths.hasOwnProperty(id)) {
         arr.push(paths[id].abs_plot);
@@ -46,7 +53,17 @@ function submitPaths(paths) {
             "question_id": question_id,
             "response_type": "paths",
             "response_data": data
-        });
+        }, callback);
+    }
+}
+
+function submitText(text, callback) {
+    if (question_id !== null) {
+        ws.send("response", {
+            "question_id": question_id,
+            "response_type": "text",
+            "response_data": text
+        }, callback);
     }
 }
 
@@ -247,6 +264,7 @@ $(function () {
 
         $(document).on("pageload", function () {
             canvas = new DrawingCanvas($(".drawing-plane")[0]);
+            changeMode("draw");
 
             function bindToPlane(query, evt, planeEvt) {
                 if (isNull(planeEvt)) planeEvt = evt;
@@ -319,10 +337,41 @@ $(function () {
             });
 
             $(".toolbox-eraser").click(function () {
-                canvas.paths = {};
+                switch (mode) {
+                    case "draw":
+                        canvas.paths = {};
+                        break;
+                    case "text":
+                        $(".text-response").val("");
+                        break;
+                }
             });
             $(".toolbox-submit").click(function () {
-                submitPaths(canvas.paths);
+                switch (mode) {
+                    case "draw":
+                        submitPaths(canvas.paths, function () {
+                            canvas.paths = {};
+                        });
+                        break;
+                    case "text":
+                        var text = $(".text-response").val().trim();
+                        if (!text) return;
+                        submitText(text, function () {
+                            $(".text-response").val("");
+                        });
+                }
+            });
+            $(".toolbox-change-mode").click(function () {
+                switch (mode) {
+                    case "draw":
+                        changeMode("text");
+                        break;
+                    case "text":
+                        changeMode("draw");
+                        break;
+                    default:
+                        changeMode("draw");
+                }
             });
         });
     });

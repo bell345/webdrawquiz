@@ -160,7 +160,7 @@ $(function () {
         });
 
         ws.on("message-type.response", function (e, msg) {
-            if (!msg.response_id || !msg.response_type || !msg.response_data || !msg.contestant_id)
+            if (!msg.response_id || !msg.response_type || !msg.response_data || !msg.contestant_id || isNull(msg.correct))
                 return reportError("Got unexpected response from server (type='response')", null, continueHandler);
 
             var row = $(".quiz-responses tbody tr.template")[0].cloneNode(true);
@@ -200,6 +200,12 @@ $(function () {
                     span.className = "response-text-display";
                     span.innerText = msg.response_data;
                     $(row).find(".contestant-response-container").append(span);
+
+                    function prep(x) { return x.toLowerCase().trim(); }
+                    if (prep(msg.response_data) === prep($(".quiz-answer-display").text())
+                            && !msg.correct)
+                        $(row).find(".contestant-correct").click();
+
                     break;
 
                 case "paths":
@@ -243,11 +249,11 @@ $(function () {
             if (!changeState("conclusion")) return;
 
             var winner = contestants[msg.winner_id];
-            if (!winner || winner.status !== "connected") {
+            if (!winner || !winner.contestant_name) {
                 winner = null;
                 for (var prop in contestants) if (contestants.hasOwnProperty(prop)) {
                     var c = contestants[prop];
-                    if ((!winner || c.score > winner.score) && c.status === "connected")
+                    if ((!winner || c.score > winner.score) && c.contestant_name)
                         winner = c;
                 }
             }
