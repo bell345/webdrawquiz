@@ -37,7 +37,9 @@ function nextQuestion() {
 function updatePlayers() {
     var names = [];
     for (var prop in contestants) if (contestants.hasOwnProperty(prop)) {
-        names.push(contestants[prop].contestant_name);
+        var c = contestants[prop];
+        if (c.status === "connected" && c.contestant_name)
+            names.push(c.contestant_name);
     }
 
     $(".players-display").text(names.join(", "));
@@ -147,7 +149,13 @@ $(function () {
         });
 
         ws.on("message-type.contestant", function (e, msg) {
-            contestants[msg.contestant_id] = msg;
+            var id = msg.contestant_id;
+            if (!contestants[id])
+                contestants[id] = {};
+
+            for (var prop in msg) if (msg.hasOwnProperty(prop)) {
+                contestants[id][prop] = msg[prop];
+            }
             updatePlayers();
         });
 
@@ -234,11 +242,17 @@ $(function () {
 
             if (!changeState("conclusion")) return;
 
-            var contestant = contestants[msg.winner_id];
-            if (contestant === undefined)
-                return reportError("Winning contestant is invalid or offline.", null, continueHandler);
+            var winner = contestants[msg.winner_id];
+            if (!winner || winner.status !== "connected") {
+                winner = null;
+                for (var prop in contestants) if (contestants.hasOwnProperty(prop)) {
+                    var c = contestants[prop];
+                    if ((!winner || c.score > winner.score) && c.status === "connected")
+                        winner = c;
+                }
+            }
 
-            $(".winner-display").text(contestant.contestant_name);
+            $(".winner-display").text(winner ? winner.contestant_name : "unknown");
         });
 
         ws.open("../api/v1/ws/host");

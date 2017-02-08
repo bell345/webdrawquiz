@@ -27,30 +27,34 @@ Host.prototype.connect = function () {
             "title": this.instance.title
         });
 
-        self.updatePlayers(true);
+        self.updatePlayers(true, function (err) {
+            if (err) return error("server_error",
+                "An error occured while retreiving contestant info.",
+                null, err).send(self.ws);
 
-        var question = this.instance.currentQuestion;
-        if (question !== null) {
-            this.sendQuestion(question, true);
-            if (question.answerSent) {
-                send(self.ws, {
-                    "type": "answer",
-                    "question_id": question.id
+            var question = self.instance.currentQuestion;
+            if (question !== null) {
+                self.sendQuestion(question, true);
+                if (question.answerSent) {
+                    send(self.ws, {
+                        "type": "answer",
+                        "question_id": question.id
+                    });
+                }
+
+                self.model.getResponses(question.id, function (err, responses) {
+                    if (err) return error("server_error",
+                        "An error occurred while retreiving responses.",
+                        null, err).send(self.ws);
+
+                    if (!responses) return;
+
+                    responses.forEach(function (response) {
+                        self.sendResponse(response);
+                    });
                 });
             }
-
-            self.model.getResponses(question.id, function (err, responses) {
-                if (err) return error("server_error",
-                    "An error occurred while retreiving responses.", msg, err)
-                    .send(self.ws);
-
-                if (!responses) return;
-
-                responses.forEach(function (response) {
-                    self.sendResponse(response);
-                });
-            });
-        }
+        });
     }
 };
 Host.prototype.disconnect = function () {
@@ -230,8 +234,12 @@ Host.prototype.endGame = function (msg, callback) {
         return callback(null);
     });
 };
-Host.prototype.updatePlayers = function (hostOnly) {
+Host.prototype.updatePlayers = function (hostOnly, callback) {
     var self = this;
+    callback = callback || function () {};
+    var contestants = self.instance.contestants;
+    var messagesToSend = contestants.length;
+
     function _send(payload) {
         if (hostOnly) {
             if (payload.send !== undefined)
@@ -241,31 +249,25 @@ Host.prototype.updatePlayers = function (hostOnly) {
         } else {
             self.broadcast(payload);
         }
+
+        if (--messagesToSend === 0)
+            return callback(null);
     }
 
-    self.instance.contestants.forEach(function (contestant) {
-        if (contestant.closed) {
-            _send({
-                "type": "contestant",
-                "status": "disconnected",
-                "contestant_id": contestant.id
-            });
-        } else {
-            contestant.getInfo(function (err, info) {
-                if (err) {
-                    _send(error("server_error",
-                        "There was an error while retreiving contestant info.",
-                        null, err));
-                } else {
-                    _send({
-                        "type": "contestant",
-                        "status": "connected",
-                        "contestant_id": contestant.id,
-                        "contestant_name": info.name,
-                        "score": info.score
-                    });
-                }
-            });
-        }
+    contestants.forEach(function (contestant) {
+        contestant.getInfo(function (err, info) {
+            if (err) {
+                return callback(err);
+            } else {
+                var status = contestant.closed ? "disconnected" : "connected";
+                _send({
+                    "type": "contestant",
+                    "status": status,
+                    "contestant_id": contestant.id,
+                    "contestant_name": info.name,
+                    "score": info.score
+                });
+            }
+        });
     });
 };
