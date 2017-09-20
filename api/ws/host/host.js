@@ -180,6 +180,7 @@ Host.prototype.announceWinner = function (winner_id) {
     });
 };
 Host.prototype.closeGame = function (reason) {
+    this.updatePlayers();
     this.broadcast({
         "type": "close",
         "reason": reason

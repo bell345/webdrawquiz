@@ -248,17 +248,20 @@ $(function () {
 
             if (!changeState("conclusion")) return;
 
-            var winner = contestants[msg.winner_id];
-            if (!winner || !winner.contestant_name) {
-                winner = null;
-                for (var prop in contestants) if (contestants.hasOwnProperty(prop)) {
-                    var c = contestants[prop];
-                    if ((!winner || c.score > winner.score) && c.contestant_name)
-                        winner = c;
-                }
+            for (var id in contestants) if (contestants.hasOwnProperty(id)) {
+                var name = contestants[id].contestant_name;
+                var score = contestants[id].score;
+
+                var row = $(".quiz-totals tbody tr.template")[0].cloneNode(true);
+                $(row).removeClass("template");
+                $(".quiz-totals tbody").append(row);
+
+                $(row).find(".contestant-name").text(name);
+                $(row).find(".contestant-score").text(score);
             }
 
-            $(".winner-display").text(winner ? winner.contestant_name : "unknown");
+            var index = $(".quiz-totals th:contains('Score')").index();
+            TBI.UI.sortTable($(".quiz-totals")[0], index, true, "numeric");
         });
 
         ws.open("../api/v1/ws/host");
