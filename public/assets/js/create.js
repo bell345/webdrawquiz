@@ -11,13 +11,24 @@ $(function () {
         if (e.preventDefault) e.preventDefault();
 
         var tbody = $(".quiz-questions tbody")[0];
-        var row = $(".quiz-questions tbody tr:last-child")[0];
+        var row = $(".quiz-questions tbody tr.template.freeform-row")[0];
         row = row.cloneNode(true);
+        $(row).removeClass("template");
+        tbody.appendChild(row);
+        bindRow(row);
+    });
+    $(".add-choice-question").click(function (e) {
+        if (e.preventDefault) e.preventDefault();
+
+        var tbody = $(".quiz-questions tbody")[0];
+        var row = $(".quiz-questions tbody tr.template.choice-row")[0];
+        row = row.cloneNode(true);
+        $(row).removeClass("template");
         tbody.appendChild(row);
         bindRow(row);
     });
 
-    bindRow($(".quiz-questions tbody tr"));
+    bindRow($(".quiz-questions tbody tr:not(.template)"));
 
     $(".quiz-creation").on("submit", function (e) {
         if (e.preventDefault) e.preventDefault();
@@ -33,13 +44,17 @@ $(function () {
             processData: false,
             data: {
                 "title": $(".quiz-title").val(),
-                "questions": $(".quiz-questions tbody tr").map(function (i, e) {
-                    return {
+                "questions": $(".quiz-questions tbody tr:not(.template)").map(function (i, e) {
+                    var spec = {
                         "question": $(e).find(".quiz-question").val(),
                         "answer": $(e).find(".quiz-answer").val(),
                         "time_limit": time_limit,
                         "score": $(e).find(".quiz-score").val()
                     };
+                    if ($(e).hasClass("choice-row"))
+                        spec["valid_responses"] = $(e).find(".quiz-valid-responses").val();
+
+                    return spec;
                 }).toArray()
             },
             success: function (res, status, xhr) {

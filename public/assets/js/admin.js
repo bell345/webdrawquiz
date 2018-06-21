@@ -118,7 +118,7 @@ $(function () {
             if (!changeState("question")) return;
 
             question_id = msg.question_id;
-            $(".quiz-question-display").text(msg.question);
+            $(".quiz-question-display").text(msg.question.split("^")[0]);
             $(".quiz-answer-display").text(msg.answer);
             $(".quiz-responses tbody tr:not(.template)").remove();
 

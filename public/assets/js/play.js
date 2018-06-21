@@ -6,6 +6,7 @@ var ws, canvas,
     held = false,
     mode = "draw",
     previousScore = 0,
+    choices = [],
     score = 0;
 
 LEGAL_STATE_TRANSITIONS = {
@@ -193,7 +194,28 @@ $(function () {
                 canvas.paths = {};
 
             question_id = msg.question_id;
-            $(".question-display").text(msg.question);
+            $(".question-display").text(msg.question.split("^")[0]);
+
+            if (msg.question.indexOf("^") !== -1) {
+                // encountered multiple choice question
+                // switch to special mode
+                changeMode("choice");
+                choices = msg.question.split("^")[1].split(/, */);
+
+                $(".choice-response option:not(.choice-default)").remove();
+                for (var i=0;i<choices.length;i++) {
+                    var choice = choices[i];
+                    var element = document.createElement("option");
+
+                    $(element).text(choice);
+                    element.setAttribute("value", i.toString());
+                    $(".choice-response").append(element);
+                }
+            } else if (mode === "choice") {
+                // switch out of special mode
+                changeMode("draw");
+            }
+
             var expiry = new Date(msg.timeout).getTime();
 
             var interval = setInterval(function () {
@@ -324,6 +346,7 @@ $(function () {
                 held = false;
                 e.preventDefault();
                 plane.commitPath();
+                submitPaths(canvas.paths);
             });
             canvas.addEventHandler("input_move", function (plane, e) {
                 if (!held) return;
@@ -337,28 +360,20 @@ $(function () {
             });
 
             $(".toolbox-eraser").click(function () {
-                switch (mode) {
-                    case "draw":
-                        canvas.paths = {};
-                        break;
-                    case "text":
-                        $(".text-response").val("");
-                        break;
+                canvas.paths = {};
+            });
+            $(".text-response").on("change", function () {
+                if (mode === "text") {
+                    var text = $(".text-response").val().trim();
+                    if (!text) return;
+                    submitText(text);
                 }
             });
-            $(".toolbox-submit").click(function () {
-                switch (mode) {
-                    case "draw":
-                        submitPaths(canvas.paths, function () {
-                            canvas.paths = {};
-                        });
-                        break;
-                    case "text":
-                        var text = $(".text-response").val().trim();
-                        if (!text) return;
-                        submitText(text, function () {
-                            $(".text-response").val("");
-                        });
+            $(".choice-response").on("change", function () {
+                if (mode === "choice") {
+                    var selected = choices[$(".choice-response").val()];
+                    if (!selected) return;
+                    submitText(selected);
                 }
             });
             $(".toolbox-change-mode").click(function () {

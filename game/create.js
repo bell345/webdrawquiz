@@ -53,6 +53,29 @@ function validate(done) {
         if (isNaN(parseInt(question["score"])) || question["score"] <= 0)
             return done(error("invalid_client",
                 "The score must be a positive integer for each question."));
+
+        // remove all '^' characters that may be confused for multiple choice spec
+        question["question"] = question["question"].replace(/\^/g, "");
+
+        if (question["valid_responses"] !== undefined) {
+            if (!question["valid_responses"] || question["valid_responses"].indexOf(",") === -1)
+                return done(error("invalid_client",
+                    "For each multiple choice question, valid responses must consist of two or more " +
+                    "comma separated items."));
+
+            var valid_responses = question["valid_responses"].split(/, */);
+            if (valid_responses.length < 2)
+                return done(error("invalid_client",
+                    "For each multiple choice question, valid responses must consist of two or more " +
+                    "comma separated items."));
+
+            if (valid_responses.indexOf(question["answer"]) === -1)
+                return done(error("invalid_client",
+                    "Correct answer must appear in list of valid responses."));
+
+            question["question"] += "^" + question["valid_responses"];
+            console.log(this.req.body["questions"][i]["question"]);
+        }
     }
 
     this.title = this.req.body["title"];

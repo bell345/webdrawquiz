@@ -14,20 +14,27 @@
         <input type="text" class="text-response" placeholder="Type here" />
     </div>
 </div>
-<div class="question-popup">
+<div class="choice-container only mode-choice">
+    <div class="control-row">
+        <q class="question-display"></q>
+    </div>
+    <div class="control-row">
+        <select class="choice-response">
+            <option selected disabled hidden class="choice-default" value>Pick one...</option>
+        </select>
+    </div>
+</div>
+<div class="question-popup only mode-draw">
     <q class="question-display"></q>
 </div>
 <div class="toolbox-container">
     <ul class="toolbox">
-        <li class="toolbox-change-mode">
+        <li class="toolbox-change-mode only mode-draw mode-text">
             <i class="material-icons only mode-draw">keyboard</i>
             <i class="material-icons only mode-text">gesture</i>
         </li>
         <li class="toolbox-eraser only mode-draw">
             <i class="material-icons">delete</i>
-        </li>
-        <li class="toolbox-submit">
-            <i class="material-icons">send</i>
         </li>
         <li class="toolbox-time-remaining text-item">
             <span class="timeout-display">00:00.00</span>

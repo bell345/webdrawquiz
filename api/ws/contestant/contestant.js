@@ -71,17 +71,24 @@ Contestant.prototype.submitResponse = function (msg, callback) {
         return callback(error("bad_request",
             "Message must have a 'response_data' field.", msg));
 
-    if (self.instance.currentQuestion === null)
+    var question = self.instance.currentQuestion;
+
+    if (question === null)
         return callback(error("invalid_question",
             "The quiz is not currently running any questions.", msg));
 
-    if (self.instance.currentQuestion.id != msg.question_id)
+    if (question.id !== msg.question_id)
         return callback(error("invalid_question",
             "The current question is not the one that the response was sent for.", msg));
 
-    if (self.instance.currentQuestion.timeout <= new Date().getTime())
+    if (question.timeout <= new Date().getTime())
         return callback(error("invalid_question",
             "The current question is no longer accepting entries."));
+
+    if (question.validResponses !== null &&
+        question.validResponses.indexOf(msg.response_data) === -1)
+        return callback(error("invalid_client",
+            "Response is not valid (for multiple choice question)."));
 
     self.model.submitResponse(msg.question_id, self.id, msg.response_type, msg.response_data, function (err, response) {
         if (err) return callback(error("server_error",

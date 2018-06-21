@@ -18,9 +18,6 @@ div.show {
     font-weight:bold;
     margin-bottom:16px;
 }
-tr.template {
-    display:none;
-}
 svg .response-path {
     fill:none;
     stroke:#333;

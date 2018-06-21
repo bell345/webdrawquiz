@@ -14,6 +14,7 @@
         </div>
         <div class="control-row">
             <input type="button" class="add-question" value="Add Question" />
+            <input type="button" class="add-choice-question" value="Add Multiple Choice Question" />
             <input type="submit" class="major submit-quiz" value="Submit Quiz" />
         </div>
         <div class="control-row">
@@ -26,15 +27,24 @@
             <thead>
                 <tr>
                     <th>Question</th>
+                    <th></th>
                     <th>Answer</th>
                     <th>Score</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
+                <tr class="template freeform-row">
                     <td><textarea class="quiz-question" placeholder="Question"></textarea></td>
+                    <td></td>
                     <td><textarea class="quiz-answer" placeholder="Answer"></textarea></td>
+                    <td><input type="number" class="quiz-score" min="0" value="10" /></td>
+                    <td><button class="red-button remove-question"><i class="material-icons">close</i></button></td>
+                </tr>
+                <tr class="template choice-row">
+                    <td><textarea class="quiz-question" placeholder="Question"></textarea></td>
+                    <td><textarea class="quiz-valid-responses" placeholder="Valid responses separated by commas"></textarea></td>
+                    <td><textarea class="quiz-answer" placeholder="Correct answer"></textarea></td>
                     <td><input type="number" class="quiz-score" min="0" value="10" /></td>
                     <td><button class="red-button remove-question"><i class="material-icons">close</i></button></td>
                 </tr>

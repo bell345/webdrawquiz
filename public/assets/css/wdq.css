@@ -93,3 +93,6 @@ table.quiz-questions textarea:focus {
     border-bottom:2px solid #69a;
     outline:none;
 }
+tr.template {
+    display:none;
+}

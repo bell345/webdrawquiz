@@ -25,6 +25,7 @@ function GameInstance(gserver, id) {
     this.currentQuestion = null;
     this.started = false;
     this.ended = false;
+    this.validResponses = null;
 }
 
 GameInstance.prototype.hostConnect = function (host) {
@@ -52,6 +53,12 @@ GameInstance.prototype.nextQuestion = function (callback) {
         this.debug("Next question (%s): %s",
             this.currentQuestion.id,
             this.currentQuestion.question);
+
+        if (this.currentQuestion.question.indexOf("^") !== -1)
+            this.currentQuestion.validResponses =
+                this.currentQuestion.question.split("^")[1].split(/, */);
+        else
+            this.currentQuestion.validResponses = null;
 
         this.host.sendQuestion(this.currentQuestion);
         callback(null, this.currentQuestion);

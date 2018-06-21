@@ -13,6 +13,7 @@ To server (unauthenticated):
         "questions": [{
             "question": string,
             "answer": string,
+            "valid_responses": string,
             "time_limit": integer,
             "score": integer
         }]
@@ -92,7 +93,7 @@ To client:
 
 This message is sent between the host and the contestants regularly to synchronise player statuses.
 
-"status" is one of "connected", "disconected".
+"status" is one of "connected", "disconnected".
 
 To host from server:
 
